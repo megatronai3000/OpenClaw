@@ -44,5 +44,56 @@
 - [ ] Add validation to reject synthetic/placeholder cost entries
 - [ ] Monthly audit process to verify tracked vs actual spend
 
+## New System: api-cost-tracker.js
+
+**Location:** `megatron-dashboard-api/api-cost-tracker.js`
+
+### Usage
+
+**Log actual API call:**
+```javascript
+const { logActualAPICall } = require('./api-cost-tracker');
+
+// After API response with usage data
+logActualAPICall('moonshot', 'kimi-k2.5', {
+  input_tokens: 1250,
+  output_tokens: 3400
+}, 'my-task-name');
+```
+
+**Get accurate estimate based on historical data:**
+```javascript
+const { calculateAccurateEstimate } = require('./api-cost-tracker');
+
+const estimate = calculateAccurateEstimate(
+  'kimi-k2.5',
+  1000,  // estimated input tokens
+  2000   // estimated output tokens
+);
+// Returns: { estimatedCost: 0.0142, confidence: 'high', basedOn: '45 actual API calls' }
+```
+
+**Generate spend report:**
+```bash
+cd megatron-dashboard-api
+node api-cost-tracker.js
+```
+
+### Provider Pricing (per 1K tokens)
+
+| Provider | Model | Input | Output |
+|----------|-------|-------|--------|
+| Moonshot | kimi-k2.5 | $0.0015 | $0.006 |
+| OpenAI | gpt-4o | $0.0025 | $0.010 |
+| OpenAI | gpt-4o-mini | $0.00015 | $0.0006 |
+| Google | gemini-2.5-flash | $0.00015 | $0.0006 |
+
+### Rules Going Forward
+
+1. **NEVER log synthetic costs** — only actual API responses
+2. **Always capture usage data** from API responses
+3. **Use historical averages** for estimates when 10+ samples exist
+4. **Weekly audits** to verify tracked vs actual spend
+
 ---
 *Database corrected: 2026-02-13 14:20 EST*
