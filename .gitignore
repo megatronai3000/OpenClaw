@@ -1,0 +1,41 @@
+# Sensitive files
+.env
+*.key
+*.pem
+secrets/
+config/secrets*
+
+# Runtime files
+.autonomous-trigger
+.system-status
+*.log
+logs/
+tmp/
+temp/
+
+# Node modules
+node_modules/
+package-lock.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Large model files
+*.gguf
+*.bin
+models/
+
+# Build outputs
+dist/
+build/
+.cache/
+
+# Session data (contains sensitive info)
+sessions/
+*.session
