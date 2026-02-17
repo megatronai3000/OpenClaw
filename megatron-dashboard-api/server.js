@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const WebSocket = require('ws');
 const http = require('http');
+const Router = express.Router;
 const progressTracker = require('./progress-tracker');
 const budgetTracker = require('./budget-tracker');
 const DashboardWebSocket = require('./websocket-server');
@@ -2830,6 +2831,46 @@ app.get('/api/ws/test-task', (req, res) => {
 // Kanban Archive API
 const archiveRoutes = require('./archive-routes');
 app.use('/api/archive', archiveRoutes);
+
+// Proposal Workflow API
+const proposalRoutes = require('./proposal-routes');
+app.use('/api/proposals', proposalRoutes);
+
+// Guard Rails API
+const guardrailsRoutes = require('./guardrails-routes')(Router());
+app.use('/api/guardrails', guardrailsRoutes);
+
+// Agent Team API
+const agentRoutesV2 = require('./agent-routes-v2')(Router());
+app.use('/api/agents-v2', agentRoutesV2);
+
+// Auto-Execution Engine
+const autoExecutor = require('./auto-executor');
+autoExecutor.start(30000); // Check every 30 seconds
+
+// Auto-Execution API
+app.get('/api/autoexec/status', (req, res) => {
+  res.json(autoExecutor.getStatus());
+});
+
+app.post('/api/autoexec/trigger/:proposalId', async (req, res) => {
+  try {
+    const result = await autoExecutor.triggerExecution(req.params.proposalId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/autoexec/start', (req, res) => {
+  autoExecutor.start();
+  res.json({ success: true, message: 'Auto-executor started' });
+});
+
+app.post('/api/autoexec/stop', (req, res) => {
+  autoExecutor.stop();
+  res.json({ success: true, message: 'Auto-executor stopped' });
+});
 
 // Store wsServer reference for archive routes
 app.locals.wss = wsServer;
