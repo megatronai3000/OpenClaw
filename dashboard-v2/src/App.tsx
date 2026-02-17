@@ -3,88 +3,68 @@ import {
   LayoutDashboard, 
   Kanban, 
   FolderKanban, 
-  FileText, 
-  CheckSquare, 
-  Lightbulb, 
+  ClipboardList,
+  Users, 
   Menu, 
   X, 
   Zap, 
   Activity,
   DollarSign,
-  Brain,
-  Settings,
-  TrendingUp,
   AlertCircle,
   CheckCircle2,
   Clock,
-  ChevronRight,
-  MoreHorizontal,
-  BarChart3,
-  ClipboardList,
-  Server,
-  Play,
-  Pause,
   RefreshCw,
   ArrowUpRight,
-  ArrowDownRight,
   Minus,
   Bot,
-  Users
+  BarChart3,
+  TrendingUp,
+  Server,
+  Play,
+  Pause
 } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 
-// API Base URL
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = 'http://localhost:3001/api'
 
-// Color palette
-const COLORS = {
-  primary: '#3b82f6',
-  success: '#22c55e',
-  warning: '#eab308',
-  error: '#ef4444',
-  purple: '#8b5cf6',
-  cyan: '#06b6d4',
-  pink: '#ec4899',
-}
-
+// shadCN Components
 const Card = ({ children, className = '' }) => (
-  <div className={`bg-[var(--color-card)] border border-[var(--color-border)] rounded-xl ${className}`}>
+  <div className={`rounded-xl border bg-card text-card-foreground shadow ${className}`}>
     {children}
   </div>
 )
 
-const Badge = ({ children, variant = 'default', className = '' }) => {
+const Badge = ({ children, variant = 'default' }) => {
   const variants = {
-    default: 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]',
-    success: 'bg-green-500/20 text-green-500',
-    warning: 'bg-yellow-500/20 text-yellow-500',
-    error: 'bg-red-500/20 text-red-500',
-    secondary: 'bg-[var(--color-secondary)] text-[var(--color-muted-foreground)]',
-    outline: 'border border-[var(--color-border)] text-[var(--color-muted-foreground)]',
+    default: 'bg-primary text-primary-foreground',
+    success: 'bg-green-500/20 text-green-500 border-green-500/30',
+    warning: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30', 
+    destructive: 'bg-red-500/20 text-red-500 border-red-500/30',
+    secondary: 'bg-secondary text-secondary-foreground',
+    outline: 'border border-border text-muted-foreground',
   }
   return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${variants[variant]} ${className}`}>
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors ${variants[variant]}`}>
       {children}
     </span>
   )
 }
 
-const Button = ({ children, variant = 'primary', size = 'md', className = '', ...props }) => {
+const Button = ({ children, variant = 'default', size = 'default', className = '', ...props }) => {
   const variants = {
-    primary: 'bg-[var(--color-primary)] hover:bg-blue-600 text-white',
-    secondary: 'bg-[var(--color-secondary)] hover:bg-[var(--color-muted)] text-[var(--color-foreground)]',
-    outline: 'border border-[var(--color-border)] hover:bg-[var(--color-secondary)] text-[var(--color-foreground)]',
-    ghost: 'hover:bg-[var(--color-secondary)] text-[var(--color-muted-foreground)]',
-    destructive: 'bg-red-600 hover:bg-red-700 text-white',
-    success: 'bg-green-600 hover:bg-green-700 text-white',
+    default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+    destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+    outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+    ghost: 'hover:bg-accent hover:text-accent-foreground',
+    success: 'bg-green-600 text-white hover:bg-green-700',
   }
   const sizes = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2',
-    lg: 'px-6 py-3 text-lg',
+    default: 'h-10 px-4 py-2',
+    sm: 'h-9 rounded-md px-3',
+    lg: 'h-11 rounded-md px-8',
   }
   return (
-    <button className={`rounded-lg font-medium transition-all duration-200 ${variants[variant]} ${sizes[size]} ${className}`} {...props}>
+    <button className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors ${variants[variant]} ${sizes[size]} ${className}`} {...props}>
       {children}
     </button>
   )
@@ -93,17 +73,17 @@ const Button = ({ children, variant = 'primary', size = 'md', className = '', ..
 const SidebarItem = ({ icon: Icon, label, active, onClick, count }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
       active 
-        ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-lg shadow-blue-500/20' 
-        : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-secondary)] hover:text-[var(--color-foreground)]'
+        ? 'bg-primary text-primary-foreground' 
+        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
     }`}
   >
-    <Icon size={20} />
-    <span className="font-medium">{label}</span>
+    <Icon size={18} />
+    <span className="flex-1">{label}</span>
     {count > 0 && (
-      <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
-        active ? 'bg-white/20' : 'bg-[var(--color-secondary)] text-[var(--color-muted-foreground)]'
+      <span className={`text-xs px-2 py-0.5 rounded-full ${
+        active ? 'bg-white/20' : 'bg-secondary'
       }`}>
         {count}
       </span>
@@ -111,148 +91,161 @@ const SidebarItem = ({ icon: Icon, label, active, onClick, count }) => (
   </button>
 )
 
-// Fetch helpers
-async function fetchJSON(url) {
-  const res = await fetch(url);
-  return res.json();
+// Fetch helper
+async function fetchAPI(endpoint) {
+  try {
+    const res = await fetch(`${API_BASE}${endpoint}`)
+    return await res.json()
+  } catch (e) {
+    console.error('API Error:', e)
+    return null
+  }
 }
 
-function DashboardHome() {
-  const [refreshing, setRefreshing] = useState(false)
-  const [costData, setCostData] = useState([])
+// Dashboard View
+function Dashboard() {
+  const [executive, setExecutive] = useState(null)
+  const [costs, setCosts] = useState(null)
   const [guardrails, setGuardrails] = useState(null)
-  const [autoexec, setAutoexec] = useState(null)
-  const [agents, setAgents] = useState(null)
-  
+  const [proposals, setProposals] = useState(null)
+  const [loading, setLoading] = useState(true)
+
   const loadData = async () => {
-    try {
-      const [gr, ae, ag] = await Promise.all([
-        fetchJSON(`${API_BASE}/guardrails/stats`),
-        fetchJSON(`${API_BASE}/autoexec/status`),
-        fetchJSON(`${API_BASE}/agents-v2`),
-      ])
-      setGuardrails(gr.stats)
-      setAutoexec(ae)
-      setAgents(ag.teamStatus)
-      
-      // Mock cost data (would come from /api/costs)
-      setCostData([
-        { date: 'Mon', cost: 12, tokens: 2500 },
-        { date: 'Tue', cost: 15, tokens: 3200 },
-        { date: 'Wed', cost: 8, tokens: 1800 },
-        { date: 'Thu', cost: 18, tokens: 4100 },
-        { date: 'Fri', cost: 14, tokens: 3000 },
-        { date: 'Sat', cost: 6, tokens: 1200 },
-        { date: 'Sun', cost: 9, tokens: 2000 },
-      ])
-    } catch (e) {
-      console.error('Error loading data:', e)
-    }
-  }
-  
-  useEffect(() => {
-    loadData()
-  }, [])
-  
-  const handleRefresh = () => {
-    setRefreshing(true)
-    loadData()
-    setTimeout(() => setRefreshing(false), 1000)
+    setLoading(true)
+    const [exec, cost, guard, props] = await Promise.all([
+      fetchAPI('/executive/summary'),
+      fetchAPI('/costs/by-provider'),
+      fetchAPI('/guardrails/stats'),
+      fetchAPI('/proposals?limit=10')
+    ])
+    setExecutive(exec)
+    setCosts(cost)
+    setGuardrails(guard?.stats)
+    setProposals(props?.proposals || [])
+    setLoading(false)
   }
 
-  const todaySpend = guardrails?.todaySpend || 5.45
-  const dailyLimit = guardrails?.dailyLimit || 10
+  useEffect(() => {
+    loadData()
+    const interval = setInterval(loadData, 30000) // Refresh every 30s
+    return () => clearInterval(interval)
+  }, [])
+
+  if (loading && !executive) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <RefreshCw className="animate-spin h-8 w-8 text-muted-foreground" />
+      </div>
+    )
+  }
+
+  const metrics = executive?.metrics || {}
+  const budget = metrics.budget || {}
+  const tasks = metrics.tasks || {}
+  const agents = metrics.agents || {}
+
+  // Transform cost data for chart
+  const costChartData = costs?.byProvider?.slice(0, 7).reverse().map(p => ({
+    date: p.date?.slice(5) || '',
+    cost: Number(p.total.toFixed(2))
+  })) || []
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Welcome back</h2>
-          <p className="text-[var(--color-muted-foreground)] mt-1">Here's what's happening with your autonomous agency</p>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground">Your autonomous agency at a glance</p>
         </div>
-        <Button variant="outline" onClick={handleRefresh} className="gap-2">
-          <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+        <Button variant="outline" size="sm" onClick={loadData}>
+          <RefreshCw size={16} className="mr-2" />
           Refresh
         </Button>
       </div>
-      
+
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-[var(--color-muted-foreground)]">Active Tasks</p>
-              <p className="text-3xl font-bold mt-1">{autoexec?.queueStats?.executing || 0}</p>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="p-6">
+          <div className="flex items-center justify-between space-x-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Today's Spend</p>
+              <p className="text-2xl font-bold">{budget.spentDisplay || '$0.00'}</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-              <BarChart3 className="text-blue-500" size={24} />
-            </div>
-          </div>
-          <div className="mt-3 flex items-center gap-1 text-sm text-green-500">
-            <ArrowUpRight size={14} />
-            <span>{autoexec?.queueStats?.completed || 0} completed</span>
-          </div>
-        </Card>
-
-        <Card className="p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-[var(--color-muted-foreground)]">Team Agents</p>
-              <p className="text-3xl font-bold mt-1">4</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-              <Users className="text-purple-500" size={24} />
+            <div className="p-3 rounded-full bg-primary/10">
+              <DollarSign className="h-5 w-5 text-primary" />
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2 text-sm">
-            <Bot size={14} className="text-purple-500" />
-            <span className="text-[var(--color-muted-foreground)]">Scout, Petty, Architect</span>
+          <div className="mt-4 flex items-center text-xs text-muted-foreground">
+            <span className="mr-2">{budget.percentage?.toFixed(0) || 0}% of daily limit</span>
+            <ProgressBar value={budget.percentage || 0} />
           </div>
         </Card>
 
-        <Card className="p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-[var(--color-muted-foreground)]">Daily Cost</p>
-              <p className="text-3xl font-bold mt-1">${todaySpend.toFixed(2)}</p>
+        <Card className="p-6">
+          <div className="flex items-center justify-between space-x-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Monthly Total</p>
+              <p className="text-2xl font-bold">${budget.monthlySpent?.toFixed(2) || '0.00'}</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
-              <DollarSign className="text-green-500" size={24} />
+            <div className="p-3 rounded-full bg-green-500/10">
+              <TrendingUp className="h-5 w-5 text-green-500" />
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-1 text-sm text-green-500">
-            <Minus size={14} />
-            <span>{((todaySpend/dailyLimit)*100).toFixed(0)}% of ${dailyLimit} limit</span>
+          <div className="mt-4 flex items-center text-xs text-muted-foreground">
+            <span className="mr-2">${budget.monthlyRemaining?.toFixed(2) || 0} remaining</span>
+            <ProgressBar value={budget.percentage || 0} />
           </div>
         </Card>
 
-        <Card className="p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-[var(--color-muted-foreground)]">Monthly Total</p>
-              <p className="text-3xl font-bold mt-1">${(guardrails?.monthSpend || 52).toFixed(2)}</p>
+        <Card className="p-6">
+          <div className="flex items-center justify-between space-x-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Tasks</p>
+              <p className="text-2xl font-bold">{tasks.completedToday || 0} today</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-              <TrendingUp className="text-cyan-500" size={24} />
+            <div className="p-3 rounded-full bg-blue-500/10">
+              <CheckCircle2 className="h-5 w-5 text-blue-500" />
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-1 text-sm text-[var(--color-muted-foreground)]">
-            <Minus size={14} />
-            <span>{((guardrails?.monthSpend || 52)/(guardrails?.monthlyCap || 100)*100).toFixed(0)}% of budget</span>
+          <div className="mt-4 flex items-center text-xs text-muted-foreground">
+            <span>{tasks.pending || 0} pending</span>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between space-x-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Agents</p>
+              <p className="text-2xl font-bold">{agents.total || 0}</p>
+            </div>
+            <div className="p-3 rounded-full bg-purple-500/10">
+              <Bot className="h-5 w-5 text-purple-500" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center text-xs text-muted-foreground">
+            <Badge variant={agents.working > 0 ? 'success' : 'secondary'}>
+              {agents.working || 0} working
+            </Badge>
           </div>
         </Card>
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-5">
-          <h3 className="font-semibold mb-4">Cost Trend (7 days)</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={costData}>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Cost Trend</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <AreaChart data={costChartData}>
+              <defs>
+                <linearGradient id="costGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis dataKey="date" stroke="var(--color-muted-foreground)" fontSize={12} />
-              <YAxis stroke="var(--color-muted-foreground)" fontSize={12} />
+              <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
+              <YAxis stroke="#6b7280" fontSize={12} />
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: 'var(--color-card)', 
@@ -260,151 +253,198 @@ function DashboardHome() {
                   borderRadius: '8px'
                 }} 
               />
-              <Line type="monotone" dataKey="cost" stroke={COLORS.primary} strokeWidth={2} />
-            </LineChart>
+              <Area type="monotone" dataKey="cost" stroke="#3b82f6" fillOpacity={1} fill="url(#costGradient)" />
+            </AreaChart>
           </ResponsiveContainer>
         </Card>
 
-        <Card className="p-5">
-          <h3 className="font-semibold mb-4">Task Queue</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-secondary)]/50">
-              <span className="text-sm">Pending Approval</span>
-              <Badge variant="warning">{autoexec?.queueStats?.pending || 0}</Badge>
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Quick Stats</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">System Health</span>
+              <Badge variant={executive?.health?.overall === 'healthy' ? 'success' : 'warning'}>
+                {executive?.health?.overall || 'unknown'}
+              </Badge>
             </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-secondary)]/50">
-              <span className="text-sm">Approved</span>
-              <Badge variant="default">{autoexec?.queueStats?.approved || 0}</Badge>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Data Quality</span>
+              <Badge variant={budget.dataQuality === 'REAL' ? 'success' : 'secondary'}>
+                {budget.dataQuality || 'N/A'}
+              </Badge>
             </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-secondary)]/50">
-              <span className="text-sm">Executing</span>
-              <Badge variant="success">{autoexec?.queueStats?.executing || 0}</Badge>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Projects Active</span>
+              <span className="font-medium">{metrics.projects?.active || 0}</span>
             </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-secondary)]/50">
-              <span className="text-sm">Completed</span>
-              <Badge variant="secondary">{autoexec?.queueStats?.completed || 0}</Badge>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Auto-Exec Running</span>
+              <Badge variant="success">Active</Badge>
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Guard Rails Status */}
-      <Card className="p-5">
-        <h3 className="font-semibold mb-4">Guard Rails Status</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className={`p-3 rounded-lg text-center ${guardrails?.emergencyStop ? 'bg-red-500/20' : 'bg-green-500/20'}`}>
-            <div className="text-lg font-bold">{guardrails?.emergencyStop ? 'STOPPED' : 'ACTIVE'}</div>
-            <div className="text-xs text-[var(--color-muted-foreground)]">System</div>
+      {/* Guard Rails & Recent */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Guard Rails</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Daily Budget</span>
+              <div className="flex items-center gap-2">
+                <ProgressBar value={(guardrails?.todaySpend / guardrails?.dailyLimit) * 100 || 0} />
+                <span className="text-sm font-medium">${guardrails?.todaySpend?.toFixed(2) || 0}</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Concurrent Tasks</span>
+              <span className="text-sm font-medium">{guardrails?.concurrentTasks || 0} / {guardrails?.maxConcurrent || 5}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Pending Decisions</span>
+              <span className="text-sm font-medium">{guardrails?.pendingDecisions || 0} / {guardrails?.maxPending || 15}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Emergency Stop</span>
+              <Badge variant={guardrails?.emergencyStop ? 'destructive' : 'success'}>
+                {guardrails?.emergencyStop ? 'ACTIVE' : 'OFF'}
+              </Badge>
+            </div>
           </div>
-          <div className="p-3 rounded-lg bg-green-500/20 text-center">
-            <div className="text-lg font-bold">{guardrails?.concurrentTasks || 0}/{guardrails?.maxConcurrent || 5}</div>
-            <div className="text-xs text-[var(--color-muted-foreground)]">Concurrent</div>
+        </Card>
+
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Recent Proposals</h3>
+          <div className="space-y-2">
+            {proposals.slice(0, 4).map(p => (
+              <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary/50">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{p.taskDescription?.slice(0, 40) || 'No description'}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(p.createdAt).toLocaleDateString()}</p>
+                </div>
+                <Badge variant={
+                  p.status === 'completed' ? 'success' : 
+                  p.status === 'approved' ? 'default' :
+                  p.status === 'pending' ? 'warning' :
+                  p.status === 'rejected' ? 'destructive' : 'secondary'
+                }>
+                  {p.status}
+                </Badge>
+              </div>
+            ))}
+            {proposals.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">No proposals yet</p>
+            )}
           </div>
-          <div className="p-3 rounded-lg bg-green-500/20 text-center">
-            <div className="text-lg font-bold">{guardrails?.pendingDecisions || 0}/{guardrails?.maxPending || 15}</div>
-            <div className="text-xs text-[var(--color-muted-foreground)]">Pending</div>
-          </div>
-          <div className="p-3 rounded-lg bg-green-500/20 text-center">
-            <div className="text-lg font-bold">${guardrails?.todaySpend?.toFixed(2) || 0}</div>
-            <div className="text-xs text-[var(--color-muted-foreground)]">Today's Spend</div>
-          </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
     </div>
   )
 }
 
-function DecisionsQueue() {
-  const [decisions, setDecisions] = useState([])
+function ProgressBar({ value }) {
+  return (
+    <div className="h-2 w-24 rounded-full bg-secondary overflow-hidden">
+      <div 
+        className="h-full bg-primary transition-all" 
+        style={{ width: `${Math.min(value, 100)}%` }}
+      />
+    </div>
+  )
+}
+
+// Decisions View
+function Decisions() {
+  const [proposals, setProposals] = useState([])
   const [loading, setLoading] = useState(true)
-  
-  const loadDecisions = async () => {
-    try {
-      const data = await fetchJSON(`${API_BASE}/proposals?status=pending`)
-      setDecisions(data.proposals || [])
-    } catch (e) {
-      console.error('Error:', e)
-    } finally {
-      setLoading(false)
-    }
+
+  const loadProposals = async () => {
+    const data = await fetchAPI('/proposals')
+    setProposals(data.proposals || [])
+    setLoading(false)
   }
-  
-  useEffect(() => {
-    loadDecisions()
-  }, [])
-  
+
+  useEffect(() => { loadProposals() }, [])
+
   const handleApprove = async (id) => {
     await fetch(`${API_BASE}/proposals/${id}/approve`, { method: 'POST' })
-    loadDecisions()
+    loadProposals()
   }
-  
+
   const handleReject = async (id) => {
     await fetch(`${API_BASE}/proposals/${id}/reject`, { method: 'POST' })
-    loadDecisions()
+    loadProposals()
   }
+
+  const pending = proposals.filter(p => p.status === 'pending')
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold flex items-center gap-3">
-            Decisions
-            <Badge variant="default">{decisions.length}</Badge>
-          </h2>
-          <p className="text-[var(--color-muted-foreground)]">Review and approve agent requests</p>
+          <h2 className="text-2xl font-bold">Decisions</h2>
+          <p className="text-muted-foreground">Review and approve proposals</p>
         </div>
-        <Button variant="outline" size="sm" onClick={loadDecisions}>
-          <RefreshCw size={14} className="mr-2" />
+        <Button variant="outline" size="sm" onClick={loadProposals}>
+          <RefreshCw size={16} className="mr-2" />
           Refresh
         </Button>
       </div>
 
-      {/* Decision Cards */}
+      {/* Stats */}
+      <div className="flex gap-4">
+        <Card className="p-4 flex-1">
+          <div className="text-2xl font-bold text-yellow-500">{pending.length}</div>
+          <div className="text-sm text-muted-foreground">Pending</div>
+        </Card>
+        <Card className="p-4 flex-1">
+          <div className="text-2xl font-bold text-green-500">{proposals.filter(p => p.status === 'completed').length}</div>
+          <div className="text-sm text-muted-foreground">Completed</div>
+        </Card>
+        <Card className="p-4 flex-1">
+          <div className="text-2xl font-bold text-red-500">{proposals.filter(p => p.status === 'rejected').length}</div>
+          <div className="text-sm text-muted-foreground">Rejected</div>
+        </Card>
+      </div>
+
+      {/* Proposal List */}
       <div className="space-y-4">
         {loading ? (
-          <Card className="p-5 text-center text-[var(--color-muted-foreground)]">
-            Loading decisions...
-          </Card>
-        ) : decisions.length === 0 ? (
           <Card className="p-8 text-center">
-            <CheckCircle2 size={48} className="text-green-500 mx-auto mb-4" />
+            <RefreshCw className="animate-spin h-6 w-6 mx-auto text-muted-foreground" />
+          </Card>
+        ) : pending.length === 0 ? (
+          <Card className="p-8 text-center">
+            <CheckCircle2 className="h-12 w-12 mx-auto text-green-500 mb-4" />
             <p className="text-lg font-medium">All caught up!</p>
-            <p className="text-[var(--color-muted-foreground)]">No pending decisions</p>
+            <p className="text-muted-foreground">No pending decisions</p>
           </Card>
         ) : (
-          decisions.map(decision => (
-            <Card key={decision.id} className="p-5 border-l-4 border-l-blue-500">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Badge variant="default">{decision.type || 'proposal'}</Badge>
-                  <span className="text-xs text-[var(--color-muted-foreground)]">
-                    {new Date(decision.createdAt).toLocaleString()}
-                  </span>
+          pending.map(proposal => (
+            <Card key={proposal.id} className="p-6 border-l-4 border-l-primary">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="warning">{proposal.status}</Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {new Date(proposal.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="font-medium">{proposal.taskDescription}</p>
+                  <div className="flex gap-4 text-sm text-muted-foreground">
+                    {proposal.estimatedCost && <span>Est. ${proposal.estimatedCost}</span>}
+                    {proposal.estimatedTime && <span>{proposal.estimatedTime}</span>}
+                  </div>
                 </div>
-              </div>
-              
-              <h3 className="font-semibold mb-2">{decision.taskDescription?.substring(0, 100)}...</h3>
-              
-              <div className="flex items-center gap-4 text-sm text-[var(--color-muted-foreground)] mb-4">
-                {decision.estimatedCost && (
-                  <span className="flex items-center gap-1">
-                    <DollarSign size={14} /> ${decision.estimatedCost}
-                  </span>
-                )}
-                {decision.estimatedTime && (
-                  <span className="flex items-center gap-1">
-                    <Clock size={14} /> {decision.estimatedTime}
-                  </span>
-                )}
-              </div>
-              
-              <div className="flex gap-2">
-                <Button variant="success" size="sm" className="gap-1" onClick={() => handleApprove(decision.id)}>
-                  <CheckCircle2 size={14} /> Approve
-                </Button>
-                <Button variant="destructive" size="sm" onClick={() => handleReject(decision.id)}>
-                  Reject
-                </Button>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="success" onClick={() => handleApprove(proposal.id)}>
+                    Approve
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={() => handleReject(proposal.id)}>
+                    Reject
+                  </Button>
+                </div>
               </div>
             </Card>
           ))
@@ -414,67 +454,47 @@ function DecisionsQueue() {
   )
 }
 
-function AgentsView() {
+// Agents View
+function Agents() {
   const [agents, setAgents] = useState(null)
-  const [loading, setLoading] = useState(true)
-  
-  const loadAgents = async () => {
-    try {
-      const data = await fetchJSON(`${API_BASE}/agents-v2`)
-      setAgents(data)
-    } catch (e) {
-      console.error('Error:', e)
-    } finally {
-      setLoading(false)
-    }
-  }
-  
-  useEffect(() => {
-    loadAgents()
-  }, [])
-  
-  const agentConfigs = agents?.agents || {}
-  const teamStatus = agents?.teamStatus || { byType: {} }
 
-  const agentCards = [
-    { key: 'megatron', name: 'Megatron', role: 'Chief of Staff', desc: 'Coordination, proposals, management', color: COLORS.success },
-    { key: 'scout', name: 'Scout', role: 'Research', desc: 'Market analysis, competitive intel', color: COLORS.purple },
-    { key: 'petty', name: 'Petty', role: 'Design', desc: 'UI/UX, visual assets, prototypes', color: COLORS.pink },
-    { key: 'architect', name: 'Architect', role: 'Development', desc: 'Full-stack code implementation', color: COLORS.primary },
+  useEffect(() => {
+    fetchAPI('/agents-v2').then(setAgents)
+  }, [])
+
+  const agentList = [
+    { key: 'megatron', name: 'Megatron', role: 'Chief of Staff', color: 'text-green-500', bg: 'bg-green-500/10', desc: 'Coordination, proposals, management' },
+    { key: 'scout', name: 'Scout', role: 'Research', color: 'text-purple-500', bg: 'bg-purple-500/10', desc: 'Market analysis, competitive intel' },
+    { key: 'petty', name: 'Petty', role: 'Design', color: 'text-pink-500', bg: 'bg-pink-500/10', desc: 'UI/UX, visual assets' },
+    { key: 'architect', name: 'Architect', role: 'Development', color: 'text-blue-500', bg: 'bg-blue-500/10', desc: 'Full-stack code implementation' },
   ]
 
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-2xl font-bold flex items-center gap-3">
-          <Users className="text-blue-500" />
-          Agent Team
-        </h2>
-        <p className="text-[var(--color-muted-foreground)]">Meet your autonomous agents</p>
+        <h2 className="text-2xl font-bold">Agent Team</h2>
+        <p className="text-muted-foreground">Your autonomous workforce</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {agentCards.map(agent => (
-          <Card key={agent.key} className="p-5">
+      <div className="grid gap-4 md:grid-cols-2">
+        {agentList.map(agent => (
+          <Card key={agent.key} className="p-6">
             <div className="flex items-start gap-4">
-              <div 
-                className="w-12 h-12 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: `${agent.color}20` }}
-              >
-                <Bot size={24} style={{ color: agent.color }} />
+              <div className={`p-3 rounded-xl ${agent.bg}`}>
+                <Bot className={`h-6 w-6 ${agent.color}`} />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold">{agent.name}</h3>
-                  <Badge variant={teamStatus.byType[agent.key] > 0 ? 'success' : 'secondary'}>
-                    {teamStatus.byType[agent.key] || 0} active
+                  <Badge variant={agents?.teamStatus?.byType?.[agent.key] > 0 ? 'success' : 'secondary'}>
+                    {agents?.teamStatus?.byType?.[agent.key] || 0} active
                   </Badge>
                 </div>
-                <p className="text-sm text-[var(--color-muted-foreground)]">{agent.role}</p>
-                <p className="text-sm text-[var(--color-muted-foreground)] mt-2">{agent.desc}</p>
-                {agentConfigs[agent.key] && (
+                <p className="text-sm text-muted-foreground">{agent.role}</p>
+                <p className="text-sm text-muted-foreground mt-2">{agent.desc}</p>
+                {agents?.agents?.[agent.key] && (
                   <div className="flex flex-wrap gap-1 mt-3">
-                    {agentConfigs[agent.key].capabilities?.slice(0, 4).map(cap => (
+                    {agents.agents[agent.key].capabilities?.slice(0, 4).map(cap => (
                       <Badge key={cap} variant="outline" className="text-xs">{cap}</Badge>
                     ))}
                   </div>
@@ -488,36 +508,28 @@ function AgentsView() {
   )
 }
 
+// Main App
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
-  const renderContent = () => {
-    switch(activeTab) {
-      case 'dashboard': return <DashboardHome />;
-      case 'decisions': return <DecisionsQueue />;
-      case 'agents': return <AgentsView />;
-      default: return <DashboardHome />;
-    }
-  }
-
   return (
-    <div className="flex h-screen bg-[var(--color-background)] text-[var(--color-foreground)] overflow-hidden">
+    <div className="flex h-screen bg-background text-foreground">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-0'} transition-all duration-300 bg-[var(--color-card)] border-r border-[var(--color-border)] flex flex-col overflow-hidden`}>
-        <div className="p-4 border-b border-[var(--color-border)]">
+      <aside className={`${sidebarOpen ? 'w-64' : 'w-0'} transition-all duration-300 border-r bg-card flex flex-col overflow-hidden`}>
+        <div className="p-4 border-b">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <Zap size={24} className="text-white" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <Zap className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-lg">Megatron</h1>
-              <p className="text-xs text-[var(--color-muted-foreground)]">Command Center</p>
+              <h1 className="font-bold">Megatron</h1>
+              <p className="text-xs text-muted-foreground">Command Center</p>
             </div>
           </div>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        <nav className="flex-1 p-3 space-y-1">
           <SidebarItem 
             icon={LayoutDashboard} 
             label="Dashboard" 
@@ -538,40 +550,40 @@ function App() {
           />
         </nav>
 
-        <div className="p-4 border-t border-[var(--color-border)]">
-          <div className="flex items-center gap-3 text-sm text-[var(--color-muted-foreground)]">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-            <span>Auto-Exec Active</span>
+        <div className="p-4 border-t">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+            <span>System Online</span>
           </div>
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* Main */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 bg-[var(--color-card)] border-b border-[var(--color-border)] flex items-center justify-between px-6">
+        <header className="h-14 border-b bg-card flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-[var(--color-secondary)] rounded-lg text-[var(--color-muted-foreground)] transition-colors"
+              className="p-2 rounded-lg hover:bg-accent"
             >
               {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
-            <h2 className="text-xl font-semibold capitalize">
-              {activeTab}
-            </h2>
+            <h2 className="font-semibold capitalize">{activeTab}</h2>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-[var(--color-muted-foreground)]">
+            <span className="text-sm text-muted-foreground">
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
             </span>
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium">
               M
             </div>
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto bg-[var(--color-background)]">
-          {renderContent()}
+        <div className="flex-1 overflow-auto bg-background">
+          {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'decisions' && <Decisions />}
+          {activeTab === 'agents' && <Agents />}
         </div>
       </main>
     </div>
