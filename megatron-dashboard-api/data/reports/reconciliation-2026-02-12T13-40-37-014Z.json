@@ -1,0 +1,208 @@
+{
+  "generatedAt": "2026-02-12T13:40:37.014Z",
+  "database": "/Users/openclaw-megatron/.openclaw/workspace/megatron-dashboard-api/data/dashboard.db",
+  "reconciliation": {
+    "summary": {
+      "costTrackingTotal": "59.7355",
+      "apiUsageTotal": "0.0410",
+      "difference": "59.6945",
+      "inflationRatio": "1456.96",
+      "status": "CRITICAL"
+    },
+    "discrepancies": [
+      {
+        "type": "TOTAL_MISMATCH",
+        "severity": "CRITICAL",
+        "message": "Cost tracking total ($59.7355) differs from API usage total ($0.0410)",
+        "difference": "59.6945",
+        "inflationRatio": "1456.96",
+        "explanation": "Cost tracking is OVER-REPORTING. Possible duplicate entries or incorrect cost calculations."
+      },
+      {
+        "type": "MISSING_TOKEN_DATA",
+        "severity": "CRITICAL",
+        "message": "40 cost entries have no token data",
+        "affectedCost": "59.6300",
+        "entries": [
+          {
+            "id": "6d2a5b17-cd3e-4df9-a87c-fff859de31c8",
+            "session": "daily-sync",
+            "cost": 1.57,
+            "date": "2026-02-12"
+          },
+          {
+            "id": "beb4fcf1-9cf0-4b1c-a619-9d70b9b6539e",
+            "session": "daily-sync",
+            "cost": 1.57,
+            "date": "2026-02-12"
+          },
+          {
+            "id": "70b714e4-4f3e-46e2-9be0-6bddef27b4d1",
+            "session": "daily-sync",
+            "cost": 1.57,
+            "date": "2026-02-12"
+          },
+          {
+            "id": "feac1d8f-6b1a-45cd-8593-c6598081e7e8",
+            "session": "daily-sync",
+            "cost": 1.57,
+            "date": "2026-02-12"
+          },
+          {
+            "id": "6222ac75-915a-4b3c-aaf3-a2015bf6bf9f",
+            "session": "daily-sync",
+            "cost": 1.57,
+            "date": "2026-02-12"
+          }
+        ]
+      },
+      {
+        "type": "DUPLICATE_ENTRIES",
+        "severity": "HIGH",
+        "message": "Found 36 potential duplicate entries",
+        "duplicateCost": "55.6300",
+        "examples": [
+          {
+            "original": {
+              "id": "6d2a5b17-cd3e-4df9-a87c-fff859de31c8",
+              "date": "2026-02-12",
+              "sessionName": "daily-sync",
+              "cost": 1.57,
+              "tokens": null,
+              "model": "sync",
+              "createdAt": "2026-02-12 13:15:00"
+            },
+            "duplicate": {
+              "id": "beb4fcf1-9cf0-4b1c-a619-9d70b9b6539e",
+              "date": "2026-02-12",
+              "sessionName": "daily-sync",
+              "cost": 1.57,
+              "tokens": null,
+              "model": "sync",
+              "createdAt": "2026-02-12 12:45:00"
+            },
+            "signature": "daily-sync|1.57|2026-02-12",
+            "cost": 1.57
+          },
+          {
+            "original": {
+              "id": "6d2a5b17-cd3e-4df9-a87c-fff859de31c8",
+              "date": "2026-02-12",
+              "sessionName": "daily-sync",
+              "cost": 1.57,
+              "tokens": null,
+              "model": "sync",
+              "createdAt": "2026-02-12 13:15:00"
+            },
+            "duplicate": {
+              "id": "70b714e4-4f3e-46e2-9be0-6bddef27b4d1",
+              "date": "2026-02-12",
+              "sessionName": "daily-sync",
+              "cost": 1.57,
+              "tokens": null,
+              "model": "sync",
+              "createdAt": "2026-02-12 12:15:00"
+            },
+            "signature": "daily-sync|1.57|2026-02-12",
+            "cost": 1.57
+          },
+          {
+            "original": {
+              "id": "6d2a5b17-cd3e-4df9-a87c-fff859de31c8",
+              "date": "2026-02-12",
+              "sessionName": "daily-sync",
+              "cost": 1.57,
+              "tokens": null,
+              "model": "sync",
+              "createdAt": "2026-02-12 13:15:00"
+            },
+            "duplicate": {
+              "id": "feac1d8f-6b1a-45cd-8593-c6598081e7e8",
+              "date": "2026-02-12",
+              "sessionName": "daily-sync",
+              "cost": 1.57,
+              "tokens": null,
+              "model": "sync",
+              "createdAt": "2026-02-12 11:45:00"
+            },
+            "signature": "daily-sync|1.57|2026-02-12",
+            "cost": 1.57
+          }
+        ]
+      },
+      {
+        "type": "SUSPICIOUS_PATTERN",
+        "severity": "CRITICAL",
+        "message": "Found 40 'daily-sync' entries totaling $59.63",
+        "pattern": "daily-sync",
+        "count": 40,
+        "totalCost": "59.6300",
+        "averageCost": "1.4908",
+        "recommendation": "These entries lack token validation and may be inflated. Review the sync job cost calculation."
+      }
+    ],
+    "warnings": [
+      {
+        "type": "UNKNOWN_MODEL",
+        "message": "Model \"google/gemini-2.5-flash-preview-05-20\" not found in pricing table",
+        "model": "google/gemini-2.5-flash-preview-05-20",
+        "totalCost": 0.0055
+      }
+    ],
+    "insights": [
+      {
+        "type": "BURN_RATE",
+        "dailyBurnRate": "4.9780",
+        "projectedMonthEnd": "139.38",
+        "daysElapsed": 12,
+        "daysRemaining": 16
+      },
+      {
+        "type": "EFFICIENCY",
+        "costPer1kTokens": "0.000909",
+        "avgTokensPerCall": "4510",
+        "avgCostPerCall": "0.004100"
+      }
+    ],
+    "recommendations": [
+      {
+        "priority": "CRITICAL",
+        "action": "Review and fix cost calculation in sync jobs",
+        "details": "The \"daily-sync\" entries are inflating costs without token validation. Consider removing or correcting these entries.",
+        "potentialSavings": "High - could reduce reported costs by ~90%"
+      },
+      {
+        "priority": "HIGH",
+        "action": "Add token tracking to all cost entries",
+        "details": "Entries without token data cannot be validated. Ensure all cost tracking includes input/output token counts.",
+        "potentialSavings": "Medium - improves accuracy and auditability"
+      },
+      {
+        "priority": "HIGH",
+        "action": "Implement deduplication in cost tracking API",
+        "details": "Add unique constraints or check for existing entries before insertion.",
+        "potentialSavings": "Medium - eliminates double-counting"
+      },
+      {
+        "priority": "MEDIUM",
+        "action": "Set up budget alerts and daily spending limits",
+        "details": "Projected monthly spend is $139.38. Consider implementing daily budget caps and automated alerts at 75%, 90%, and 100% thresholds.",
+        "potentialSavings": "Prevents budget overruns through early warning"
+      },
+      {
+        "priority": "LOW",
+        "action": "Regular reconciliation audits",
+        "details": "Run this reconciliation script weekly to catch discrepancies early.",
+        "potentialSavings": "Early detection of cost anomalies"
+      }
+    ]
+  },
+  "metadata": {
+    "scriptVersion": "1.0.0",
+    "options": {
+      "shouldFix": false,
+      "generateReport": true,
+      "verbose": false
+    }
+  }
+}

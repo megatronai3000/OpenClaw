@@ -1,0 +1,17 @@
+{
+  "name": "feedback-loop-system",
+  "version": "1.0.0",
+  "description": "Agent self-improvement through decision tracking and feedback analysis",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "track": "node src/cli.js track",
+    "analyze": "node src/cli.js analyze",
+    "report": "node src/cli.js report",
+    "recommend": "node src/cli.js recommend",
+    "test": "node tests/run-tests.js"
+  },
+  "dependencies": {
+    "minimax-api": "^1.0.0"
+  }
+}

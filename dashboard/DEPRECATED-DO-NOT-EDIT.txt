@@ -1,0 +1,17 @@
+DEPRECATED - DO NOT USE
+===================
+
+This dashboard directory is DEPRECATED.
+
+CORRECT DASHBOARD:
+Location: ~/.openclaw/workspace/megatron-dashboard/
+URL: http://localhost:8080
+Status: ACTIVE
+
+THIS DIRECTORY:
+Location: ~/.openclaw/workspace/dashboard/
+Status: DEPRECATED - DO NOT EDIT
+
+All future dashboard work goes to megatron-dashboard/ only.
+
+Updated: 2026-02-16 by Megatron

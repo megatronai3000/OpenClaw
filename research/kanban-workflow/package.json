@@ -1,0 +1,17 @@
+{
+  "name": "kanban-workflow-system",
+  "version": "2.0.0",
+  "description": "Enhanced Kanban workflow system with automated transitions, validation gates, and MiniMax-powered analytics",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "workflow": "node src/cli.js workflow",
+    "transition": "node src/cli.js transition",
+    "validate": "node src/cli.js validate",
+    "analytics": "node src/cli.js analytics",
+    "test": "node tests/run-tests.js"
+  },
+  "dependencies": {
+    "minimax-api": "^1.0.0"
+  }
+}

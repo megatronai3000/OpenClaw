@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClaw Usage Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            width: 100%;
+            max-width: 480px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            color: #fff;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #8892b0;
+            font-size: 14px;
+        }
+
+        .usage-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 16px;
+        }
+
+        .usage-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .usage-title {
+            color: #fff;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .usage-period {
+            color: #64ffda;
+            font-size: 12px;
+            font-weight: 500;
+            background: rgba(100, 255, 218, 0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+
+        .cost-display {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .cost-amount {
+            color: #fff;
+            font-size: 56px;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .cost-label {
+            color: #8892b0;
+            font-size: 14px;
+        }
+
+        .quota-bar {
+            margin-bottom: 24px;
+        }
+
+        .quota-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .quota-label {
+            color: #ccd6f6;
+            font-size: 13px;
+        }
+
+        .quota-value {
+            color: #64ffda;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #64ffda, #00d4aa);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-fill.warning {
+            background: linear-gradient(90deg, #ffd700, #ffaa00);
+        }
+
+        .progress-fill.danger {
+            background: linear-gradient(90deg, #ff6b6b, #ee5a5a);
+        }
+
+        .models-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section-title {
+            color: #ccd6f6;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+
+        .model-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .model-item:last-child {
+            border-bottom: none;
+        }
+
+        .model-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .model-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .model-icon.kimi {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+        }
+
+        .model-icon.gpt {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .model-icon.claude {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+        }
+
+        .model-name {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .model-usage {
+            color: #8892b0;
+            font-size: 12px;
+            margin-top: 2px;
+        }
+
+        .model-cost {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.active {
+            background: rgba(100, 255, 218, 0.1);
+            color: #64ffda;
+        }
+
+        .status-badge.limited {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .footer-info {
+            text-align: center;
+            margin-top: 24px;
+        }
+
+        .footer-info p {
+            color: #8892b0;
+            font-size: 12px;
+        }
+
+        .refresh-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>Usage Dashboard</h1>
+            <p>Monitor your AI model consumption</p>
+        </div>
+
+        <div class="usage-card">
+            <div class="usage-header">
+                <span class="usage-title">Current Session</span>
+                <span class="usage-period">Feb 10, 2025</span>
+            </div>
+
+            <div class="cost-display">
+                <div class="cost-amount">$2.47</div>
+                <div class="cost-label">Total Cost Today</div>
+            </div>
+
+            <div class="quota-bar">
+                <div class="quota-header">
+                    <span class="quota-label">Daily Budget</span>
+                    <span class="quota-value">$2.47 / $5.00</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 49%"></div>
+                </div>
+            </div>
+
+            <div class="quota-bar">
+                <div class="quota-header">
+                    <span class="quota-label">Weekly Limit</span>
+                    <span class="quota-value">$12.34 / $25.00</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 49%"></div>
+                </div>
+            </div>
+
+            <div class="models-section">
+                <div class="section-title">Active Models</div>
+
+                <div class="model-item">
+                    <div class="model-info">
+                        <div class="model-icon kimi">K2</div>
+                        <div>
+                            <div class="model-name">Kimi K2.5</div>
+                            <div class="model-usage">1,247 tokens</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="model-cost">$1.89</div>
+                        <span class="status-badge active">
+                            <span class="dot"></span>
+                            Active
+                        </span>
+                    </div>
+                </div>
+
+                <div class="model-item">
+                    <div class="model-info">
+                        <div class="model-icon gpt">GPT</div>
+                        <div>
+                            <div class="model-name">GPT-4o</div>
+                            <div class="model-usage">892 tokens</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="model-cost">$0.42</div>
+                        <span class="status-badge active">
+                            <span class="dot"></span>
+                            Active
+                        </span>
+                    </div>
+                </div>
+
+                <div class="model-item">
+                    <div class="model-info">
+                        <div class="model-icon claude">C3</div>
+                        <div>
+                            <div class="model-name">Claude 3.5</div>
+                            <div class="model-usage">456 tokens</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="model-cost">$0.16</div>
+                        <span class="status-badge limited">
+                            <span class="dot"></span>
+                            Limited
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-info">
+            <p>Last updated: 8:55 PM EST</p>
+            <button class="refresh-btn">Refresh Data</button>
+        </div>
+    </div>
+</body>
+</html>

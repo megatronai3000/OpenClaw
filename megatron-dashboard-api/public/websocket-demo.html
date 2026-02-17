@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Megatron Dashboard - WebSocket Demo</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/websocket-client.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f1a;
+      color: #e0e0e0;
+      line-height: 1.6;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      padding: 20px 40px;
+      border-bottom: 1px solid #2a2a4a;
+    }
+    
+    .header h1 {
+      font-size: 28px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    .status-dot.connected {
+      background: #4ade80;
+    }
+    
+    .status-dot.disconnected {
+      background: #ef4444;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px 40px;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 24px;
+      margin-bottom: 30px;
+    }
+    
+    .card {
+      background: #1a1a2e;
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid #2a2a4a;
+      transition: border-color 0.3s;
+    }
+    
+    .card:hover {
+      border-color: #667eea;
+    }
+    
+    .card h2 {
+      font-size: 18px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+    }
+    
+    .card h2 .icon {
+      font-size: 24px;
+    }
+    
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #2a2a4a;
+    }
+    
+    .metric-row:last-child {
+      border-bottom: none;
+    }
+    
+    .metric-label {
+      color: #8892b0;
+      font-size: 14px;
+    }
+    
+    .metric-value {
+      font-weight: 600;
+      color: #fff;
+    }
+    
+    .metric-value.success { color: #4ade80; }
+    .metric-value.warning { color: #fbbf24; }
+    .metric-value.danger { color: #ef4444; }
+    
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #2a2a4a;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+    
+    .task-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .task-item {
+      background: #0f0f1a;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+      border-left: 3px solid #667eea;
+    }
+    
+    .task-item.completed {
+      border-left-color: #4ade80;
+    }
+    
+    .task-item.failed {
+      border-left-color: #ef4444;
+    }
+    
+    .task-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .task-title {
+      font-weight: 600;
+      color: #fff;
+    }
+    
+    .task-status {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: #2a2a4a;
+    }
+    
+    .task-status.running {
+      background: rgba(102, 126, 234, 0.2);
+      color: #667eea;
+    }
+    
+    .task-status.completed {
+      background: rgba(74, 222, 128, 0.2);
+      color: #4ade80;
+    }
+    
+    .log-container {
+      background: #0f0f1a;
+      border-radius: 8px;
+      padding: 16px;
+      max-height: 250px;
+      overflow-y: auto;
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 13px;
+    }
+    
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #1a1a2e;
+    }
+    
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .log-time {
+      color: #667eea;
+      margin-right: 8px;
+    }
+    
+    .log-level-info { color: #60a5fa; }
+    .log-level-success { color: #4ade80; }
+    .log-level-warning { color: #fbbf24; }
+    .log-level-error { color: #ef4444; }
+    
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-secondary {
+      background: #2a2a4a;
+      color: #e0e0e0;
+    }
+    
+    .btn-secondary:hover {
+      background: #3a3a5a;
+    }
+    
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .alert-warning {
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      color: #fbbf24;
+    }
+    
+    .alert-danger {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+    }
+    
+    .alert-success {
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+      color: #4ade80;
+    }
+    
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .badge-success {
+      background: rgba(74, 222, 128, 0.2);
+      color: #4ade80;
+    }
+    
+    .badge-warning {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fbbf24;
+    }
+    
+    .badge-danger {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+    
+    .full-width {
+      grid-column: 1 / -1;
+    }
+    
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .container {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>⚡ Megatron Dashboard - WebSocket Demo</h1>
+    <div class="connection-status">
+      <span class="status-dot disconnected" id="statusDot"></span>
+      <span id="statusText">Disconnected</span>
+      <span id="latency" style="margin-left: 20px; color: #8892b0;"></span>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="controls">
+      <button class="btn btn-primary" onclick="startTestTask()">
+        🚀 Start Test Task
+      </button>
+      <button class="btn btn-secondary" onclick="subscribeToAll()">
+        📡 Subscribe All
+      </button>
+      <button class="btn btn-secondary" onclick="clearLogs()">
+        🗑️ Clear Logs
+      </button>
+      <button class="btn btn-secondary" onclick="fetchMiniMaxStatus()">
+        ⚡ Refresh MiniMax
+      </button>
+    </div>
+
+    <div class="grid">
+      <!-- Connection Stats -->
+      <div class="card">
+        <h2><span class="icon">📊</span> Connection Stats</h2>
+        <div class="metric-row">
+          <span class="metric-label">Socket ID</span>
+          <span class="metric-value" id="socketId">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Server Time</span>
+          <span class="metric-value" id="serverTime">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Active Tasks</span>
+          <span class="metric-value" id="activeTaskCount">0</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Latency</span>
+          <span class="metric-value" id="latencyValue">-</span>
+        </div>
+      </div>
+
+      <!-- MiniMax Quota -->
+      <div class="card">
+        <h2><span class="icon">⚡</span> MiniMax Quota</h2>
+        <div class="metric-row">
+          <span class="metric-label">Plan</span>
+          <span class="metric-value" id="miniMaxPlan">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Quota</span>
+          <span class="metric-value" id="miniMaxQuota">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Used</span>
+          <span class="metric-value" id="miniMaxUsed">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Remaining</span>
+          <span class="metric-value" id="miniMaxRemaining">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Status</span>
+          <span class="metric-value" id="miniMaxStatus">
+            <span class="badge badge-success">Healthy</span>
+          </span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="miniMaxProgress" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Autonomous Mode -->
+      <div class="card">
+        <h2><span class="icon">🤖</span> Autonomous Mode</h2>
+        <div class="metric-row">
+          <span class="metric-label">Status</span>
+          <span class="metric-value" id="autoStatus">
+            <span class="badge badge-warning">Standby</span>
+          </span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Active Tasks</span>
+          <span class="metric-value" id="autoActiveTasks">0</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Completed</span>
+          <span class="metric-value success" id="autoCompleted">0</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Success Rate</span>
+          <span class="metric-value" id="autoSuccessRate">0%</span>
+        </div>
+      </div>
+
+      <!-- Current Task -->
+      <div class="card" id="currentTaskCard" style="display: none;">
+        <h2><span class="icon">▶️</span> Current Task</h2>
+        <div class="metric-row">
+          <span class="metric-label">Title</span>
+          <span class="metric-value" id="currentTaskTitle">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Agent</span>
+          <span class="metric-value" id="currentTaskAgent">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Progress</span>
+          <span class="metric-value" id="currentTaskProgress">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="taskProgressBar" style="width: 0%"></div>
+        </div>
+        <div class="metric-row" style="margin-top: 12px;">
+          <span class="metric-label">Phase</span>
+          <span class="metric-value" id="currentTaskPhase">-</span>
+        </div>
+      </div>
+
+      <!-- Active Tasks -->
+      <div class="card full-width">
+        <h2><span class="icon">📋</span> Active Tasks</h2>
+        <div class="task-list" id="taskList">
+          <p style="color: #8892b0; text-align: center; padding: 40px;">
+            No active tasks. Click "Start Test Task" to begin.
+          </p>
+        </div>
+      </div>
+
+      <!-- Alerts -->
+      <div class="card full-width" id="alertsCard" style="display: none;">
+        <h2><span class="icon">🚨</span> Alerts</h2>
+        <div id="alertsContainer"></div>
+      </div>
+
+      <!-- Logs -->
+      <div class="card full-width">
+        <h2><span class="icon">📝</span> Real-time Logs</h2>
+        <div class="log-container" id="logContainer">
+          <div class="log-entry">
+            <span class="log-time">--:--:--</span>
+            <span class="log-level-info">[INFO]</span>
+            Waiting for connection...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize client
+    const client = new DashboardSocketClient();
+    const tasks = new Map();
+    const logs = [];
+    
+    // Connection handlers
+    client.onConnect((data) => {
+      document.getElementById('statusDot').classList.add('connected');
+      document.getElementById('statusDot').classList.remove('disconnected');
+      document.getElementById('statusText').textContent = 'Connected';
+      document.getElementById('socketId').textContent = data.socketId;
+      addLog('Connected to WebSocket server', 'success');
+      
+      // Subscribe to all channels
+      subscribeToAll();
+    });
+    
+    client.onDisconnect((data) => {
+      document.getElementById('statusDot').classList.remove('connected');
+      document.getElementById('statusDot').classList.add('disconnected');
+      document.getElementById('statusText').textContent = 'Disconnected';
+      addLog(`Disconnected: ${data.reason}`, 'warning');
+    });
+    
+    // Task handlers
+    client.onTaskStarted((data) => {
+      tasks.set(data.id, data);
+      updateTaskList();
+      showCurrentTask(data);
+      addLog(`Task started: ${data.title}`, 'success');
+    });
+    
+    client.onTaskProgress((data) => {
+      const task = tasks.get(data.taskId);
+      if (task) {
+        task.progress = data.progress;
+        task.status = data.status;
+        task.currentPhase = data.currentPhase;
+        task.phaseName = data.phaseName;
+        updateTaskList();
+        updateCurrentTask(data);
+      }
+      if (data.message) {
+        addLog(`${data.taskId}: ${data.message}`, data.level || 'info');
+      }
+    });
+    
+    client.onTaskPhase((data) => {
+      addLog(`Phase ${data.phaseIndex + 1} (${data.phaseName}): ${data.status}`, 'info');
+    });
+    
+    client.onTaskCompleted((data) => {
+      const task = tasks.get(data.taskId);
+      if (task) {
+        task.status = 'completed';
+        task.progress = 100;
+        task.completedAt = data.timestamp;
+        updateTaskList();
+        addLog(`Task completed: ${task.title} (${data.duration}ms)`, 'success');
+      }
+      hideCurrentTask();
+    });
+    
+    client.onTaskFailed((data) => {
+      const task = tasks.get(data.taskId);
+      if (task) {
+        task.status = 'failed';
+        updateTaskList();
+        addLog(`Task failed: ${task.title} - ${data.error}`, 'error');
+      }
+      hideCurrentTask();
+    });
+    
+    // MiniMax handlers
+    client.onMiniMaxQuota((data) => {
+      document.getElementById('miniMaxPlan').textContent = data.plan || 'Coding Plan';
+      document.getElementById('miniMaxQuota').textContent = data.quota || 1000;
+      document.getElementById('miniMaxUsed').textContent = data.used || 0;
+      document.getElementById('miniMaxRemaining').textContent = data.remaining || 0;
+      
+      const percentUsed = data.quota ? (data.used / data.quota) * 100 : 0;
+      document.getElementById('miniMaxProgress').style.width = `${percentUsed}%`;
+      
+      const statusEl = document.getElementById('miniMaxStatus');
+      if (data.remaining < 20) {
+        statusEl.innerHTML = '<span class="badge badge-danger">Critical</span>';
+      } else if (data.remaining < 100) {
+        statusEl.innerHTML = '<span class="badge badge-warning">Low</span>';
+      } else {
+        statusEl.innerHTML = '<span class="badge badge-success">Healthy</span>';
+      }
+    });
+    
+    client.onMiniMaxAlert((data) => {
+      showAlert(data.type, `MiniMax: ${data.message}`);
+      addLog(`MiniMax Alert: ${data.message}`, data.type === 'critical' ? 'error' : 'warning');
+    });
+    
+    // Autonomous mode handlers
+    client.onAutonomousStatus((data) => {
+      document.getElementById('autoActiveTasks').textContent = data.activeTasks?.length || 0;
+      document.getElementById('autoCompleted').textContent = data.completedTasks?.length || 0;
+      document.getElementById('autoSuccessRate').textContent = 
+        `${data.stats?.successRate?.toFixed(1) || 0}%`;
+      
+      const statusEl = document.getElementById('autoStatus');
+      if (data.enabled) {
+        statusEl.innerHTML = '<span class="badge badge-success">Running</span>';
+      } else {
+        statusEl.innerHTML = '<span class="badge badge-warning">Standby</span>';
+      }
+    });
+    
+    client.onAutonomousTask((data) => {
+      addLog(`Autonomous task ${data.type}: ${data.taskId || data.executionId}`, 'info');
+    });
+    
+    // Cost updates
+    client.onCostUpdate((data) => {
+      addLog(`Cost update: $${data.cost?.toFixed(4) || 0}`, 'info');
+    });
+    
+    // System messages
+    client.onSystemMessage((data) => {
+      addLog(`System: ${data.message}`, data.level);
+    });
+    
+    // Heartbeat
+    client.on('heartbeat', (data) => {
+      const latency = Date.now() - data.timestamp;
+      document.getElementById('latencyValue').textContent = `${latency}ms`;
+    });
+    
+    // Helper functions
+    function addLog(message, level = 'info') {
+      const time = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log-entry';
+      logEntry.innerHTML = `
+        <span class="log-time">${time}</span>
+        <span class="log-level-${level}">[${level.toUpperCase()}]</span>
+        ${message}
+      `;
+      
+      const container = document.getElementById('logContainer');
+      container.appendChild(logEntry);
+      container.scrollTop = container.scrollHeight;
+      
+      // Keep only last 100 logs
+      while (container.children.length > 100) {
+        container.removeChild(container.firstChild);
+      }
+    }
+    
+    function updateTaskList() {
+      const list = document.getElementById('taskList');
+      document.getElementById('activeTaskCount').textContent = tasks.size;
+      
+      if (tasks.size === 0) {
+        list.innerHTML = `
+          <p style="color: #8892b0; text-align: center; padding: 40px;">
+            No active tasks. Click "Start Test Task" to begin.
+          </p>
+        `;
+        return;
+      }
+      
+      list.innerHTML = '';
+      tasks.forEach((task, id) => {
+        const item = document.createElement('div');
+        item.className = `task-item ${task.status}`;
+        item.innerHTML = `
+          <div class="task-header">
+            <span class="task-title">${task.title}</span>
+            <span class="task-status ${task.status}">${task.status}</span>
+          </div>
+          <div style="font-size: 13px; color: #8892b0; margin-bottom: 8px;">
+            ${task.agent} • ${task.progress || 0}% complete
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${task.progress || 0}%"></div>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+    
+    function showCurrentTask(task) {
+      document.getElementById('currentTaskCard').style.display = 'block';
+      document.getElementById('currentTaskTitle').textContent = task.title;
+      document.getElementById('currentTaskAgent').textContent = task.agent;
+      document.getElementById('currentTaskProgress').textContent = `${task.progress || 0}%`;
+      document.getElementById('taskProgressBar').style.width = `${task.progress || 0}%`;
+      document.getElementById('currentTaskPhase').textContent = task.phaseName || 'Initializing';
+    }
+    
+    function updateCurrentTask(data) {
+      document.getElementById('currentTaskProgress').textContent = `${data.progress || 0}%`;
+      document.getElementById('taskProgressBar').style.width = `${data.progress || 0}%`;
+      if (data.phaseName) {
+        document.getElementById('currentTaskPhase').textContent = data.phaseName;
+      }
+    }
+    
+    function hideCurrentTask() {
+      document.getElementById('currentTaskCard').style.display = 'none';
+    }
+    
+    function showAlert(type, message) {
+      const card = document.getElementById('alertsCard');
+      const container = document.getElementById('alertsContainer');
+      card.style.display = 'block';
+      
+      const alert = document.createElement('div');
+      alert.className = `alert alert-${type}`;
+      alert.innerHTML = `
+        <span>${type === 'warning' ? '⚠️' : type === 'danger' ? '🚨' : '✅'}</span>
+        <span>${message}</span>
+      `;
+      container.appendChild(alert);
+      
+      // Auto-remove after 10 seconds
+      setTimeout(() => {
+        alert.remove();
+        if (container.children.length === 0) {
+          card.style.display = 'none';
+        }
+      }, 10000);
+    }
+    
+    // Button handlers
+    function startTestTask() {
+      fetch('/api/ws/test-task')
+        .then(r => r.json())
+        .then(data => {
+          addLog(`Test task started: ${data.taskId}`, 'success');
+          // Subscribe to the new task
+          client.subscribeToTask(data.taskId);
+        })
+        .catch(err => {
+          addLog(`Failed to start test task: ${err.message}`, 'error');
+        });
+    }
+    
+    function subscribeToAll() {
+      client.subscribeToRoom('minimax-quota');
+      client.subscribeToRoom('autonomous');
+      client.subscribeToRoom('costs');
+      client.subscribeToRoom('progress');
+      addLog('Subscribed to all channels', 'success');
+    }
+    
+    function clearLogs() {
+      document.getElementById('logContainer').innerHTML = '';
+      addLog('Logs cleared', 'info');
+    }
+    
+    function fetchMiniMaxStatus() {
+      fetch('/api/minimax/status')
+        .then(r => r.json())
+        .then(data => {
+          addLog(`MiniMax status: ${data.status}`, 'info');
+        })
+        .catch(err => {
+          addLog(`Failed to fetch MiniMax status: ${err.message}`, 'error');
+        });
+    }
+    
+    // Connect on load
+    client.connect();
+    
+    // Update server time periodically
+    setInterval(() => {
+      document.getElementById('serverTime').textContent = new Date().toLocaleTimeString();
+    }, 1000);
+  </script>
+</body>
+</html>

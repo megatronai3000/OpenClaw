@@ -8,6 +8,7 @@ const WebSocket = require('ws');
 const http = require('http');
 const progressTracker = require('./progress-tracker');
 const budgetTracker = require('./budget-tracker');
+const DashboardWebSocket = require('./websocket-server');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -15,6 +16,7 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Ensure data directory exists
 const DATA_DIR = path.join(__dirname, 'data');
@@ -25,14 +27,24 @@ if (!fs.existsSync(DATA_DIR)) {
 // Initialize SQLite database
 const db = new Database(path.join(DATA_DIR, 'dashboard.db'));
 
-// Guard rails endpoint
+// Guard rails endpoint (v2 with data quality)
 app.get('/api/guard-rails/status', async (req, res) => {
   try {
-    // Get current balance
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    const costMonth = db.prepare("SELECT SUM(cost) as total FROM cost_tracking WHERE date LIKE ?").get(currentMonth + '%');
-    const monthlySpent = costMonth?.total || 0;
-    const balance = 300 - monthlySpent;
+    // Get ground truth
+    const groundTruth = db.prepare("SELECT total_ever, updated_at FROM cost_ground_truth WHERE id = 'moonshot'").get();
+    const totalEver = groundTruth?.total_ever || 0;
+    
+    // Get first sync date for data quality assessment
+    const firstSync = db.prepare(`SELECT MIN(timestamp) as ts FROM moonshot_usage_snapshots WHERE token_usage > 0`).get();
+    const firstSyncDate = firstSync?.ts ? firstSync.ts.split('T')[0] : null;
+    const hasTrueDailyData = firstSyncDate && 
+      Math.floor((new Date() - new Date(firstSyncDate)) / (1000 * 60 * 60 * 24)) >= 1;
+    
+    // Get today's spend from cost_tracking (now has accurate daily breakdown)
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayCost = db.prepare(`SELECT cost FROM cost_tracking WHERE id = 'moonshot-${todayStr}'`).get();
+    const spentToday = todayCost?.cost || 0;
+    const todayDataQuality = todayCost ? 'REAL' : 'FAKE';
     
     // Get backlog count
     const kanbanPath = path.join(SHARED_CONTEXT_DIR, 'kanban', 'cards.json');
@@ -43,11 +55,6 @@ app.get('/api/guard-rails/status', async (req, res) => {
       backlogCount = kanban.filter(c => c.status === 'backlog').length;
       inProgressCount = kanban.filter(c => c.status === 'in-progress').length;
     }
-    
-    // Get daily spend
-    const today = new Date().toISOString().split('T')[0];
-    const costToday = db.prepare('SELECT SUM(cost) as total FROM cost_tracking WHERE date = ?').get(today);
-    const spentToday = costToday?.total || 0;
     
     // Get pending decisions count
     const decisionsDir = path.join(SHARED_CONTEXT_DIR, 'decisions');
@@ -62,15 +69,19 @@ app.get('/api/guard-rails/status', async (req, res) => {
       }
     }
     
-    // Get budget data from new tracker
-    const budgetData = budgetTracker.getBudgetAPIResponse ? budgetTracker.getBudgetAPIResponse() : { today: { spent: spentToday, remaining: 10 - spentToday, status: spentToday < 10 ? 'ok' : 'exceeded' }, month: { remaining: balance, status: balance > 20 ? 'safe' : balance > 10 ? 'warning' : 'critical' } };
+    // Monthly budget (using total ever since we track from start)
+    const monthlyLimit = 300;
+    const monthlyRemaining = monthlyLimit - totalEver;
     
     res.json({
       budget: {
-        current: budgetData.month?.remaining || balance,
+        current: monthlyRemaining,
+        limit: monthlyLimit,
+        spent: totalEver,
         minimum: 20,
         emergency: 10,
-        status: budgetData.month?.status || (balance > 20 ? 'safe' : balance > 10 ? 'warning' : 'critical')
+        status: monthlyRemaining > 50 ? 'safe' : monthlyRemaining > 20 ? 'warning' : 'critical',
+        dataQuality: 'REAL'
       },
       backlog: {
         current: backlogCount,
@@ -83,19 +94,28 @@ app.get('/api/guard-rails/status', async (req, res) => {
         status: inProgressCount < 15 ? 'ok' : 'at-limit'
       },
       dailySpend: {
-        spent: budgetData.today?.spent || spentToday,
+        spent: spentToday,
+        spentDisplay: spentToday !== null ? `$${spentToday.toFixed(2)}` : 'Fake Data',
         limit: 10,
-        remaining: budgetData.today?.remaining || (10 - spentToday),
-        status: budgetData.today?.status || (spentToday < 10 ? 'ok' : 'exceeded')
+        remaining: spentToday !== null ? 10 - spentToday : null,
+        remainingDisplay: spentToday !== null ? `$${(10 - spentToday).toFixed(2)}` : 'Fake Data',
+        status: spentToday !== null ? (spentToday < 10 ? 'ok' : 'exceeded') : 'unknown',
+        dataQuality: todayDataQuality,
+        note: hasTrueDailyData ? null : 'Tracking started today. True daily cost unavailable until tomorrow.'
       },
       pendingDecisions: {
         current: pendingDecisions,
         maximum: 10,
         status: pendingDecisions < 10 ? 'ok' : 'at-limit'
+      },
+      _meta: {
+        firstSyncDate: firstSyncDate,
+        dataQuality: hasTrueDailyData ? 'REAL' : 'PARTIAL'
       }
     });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to get guard rail status' });
+    console.error('[GuardRails] Error:', err.message);
+    res.status(500).json({ error: 'Failed to get guard rail status', message: err.message });
   }
 });
 
@@ -977,30 +997,38 @@ app.get('/api/executive/summary', (req, res) => {
     const pendingTasks = queue.tasks.filter(t => t.status === 'pending').length;
     const inProgress = queue.tasks.filter(t => t.status === 'in-progress').length;
     
-    // Get budget status from actual database (not old markdown file)
-    const today = new Date().toISOString().split('T')[0];
-    const costToday = db.prepare('SELECT SUM(cost) as total FROM cost_tracking WHERE date = ?').get(today);
-    const spentToday = costToday?.total || 0;
+    // Get budget status with proper daily calculation
+    const groundTruth = db.prepare("SELECT total_ever FROM cost_ground_truth WHERE id = 'moonshot'").get();
+    const totalEver = groundTruth?.total_ever || 0;
     
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    const costMonth = db.prepare("SELECT SUM(cost) as total FROM cost_tracking WHERE date LIKE ?").get(currentMonth + '%');
-    const monthlySpent = costMonth?.total || 0;
-    const monthlyRemaining = 300 - monthlySpent;
+    // Get today's spend from cost_tracking (now has accurate daily breakdown)
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayCost = db.prepare(`SELECT cost FROM cost_tracking WHERE id = 'moonshot-${todayStr}'`).get();
+    const spentToday = todayCost?.cost || 0;
+    const todayDataQuality = todayCost ? 'REAL' : 'FAKE';
+    
+    const monthlyRemaining = 300 - totalEver;
     
     const budgetStatus = { 
       spent: spentToday, 
-      remaining: 10 - spentToday, 
-      monthlySpent: monthlySpent,
+      spentDisplay: todayDataQuality === 'REAL' ? `$${spentToday.toFixed(2)}` : 'Fake Data',
+      remaining: todayDataQuality === 'REAL' ? 10 - spentToday : null, 
+      remainingDisplay: todayDataQuality === 'REAL' ? `$${(10 - spentToday).toFixed(2)}` : 'Fake Data',
+      monthlySpent: totalEver,
       monthlyRemaining: monthlyRemaining,
-      percentage: Math.min((spentToday / 10) * 100, 100)
+      percentage: todayDataQuality === 'REAL' ? Math.min((spentToday / 10) * 100, 100) : 0,
+      dataQuality: todayDataQuality,
+      note: todayDataQuality === 'FAKE' ? 'Tracking started today. True daily cost unavailable until tomorrow.' : null
     };
     
-    // Budget health
-    if (budgetStatus.percentage > 90) {
-      health.budget = 'critical';
-      health.overall = 'warning';
-    } else if (budgetStatus.percentage > 75) {
-      health.budget = 'warning';
+    // Budget health (only if we have real data)
+    if (todayDataQuality === 'REAL') {
+      if (budgetStatus.percentage > 90) {
+        health.budget = 'critical';
+        health.overall = 'warning';
+      } else if (budgetStatus.percentage > 75) {
+        health.budget = 'warning';
+      }
     }
     
     // Get project status
@@ -1009,7 +1037,7 @@ app.get('/api/executive/summary', (req, res) => {
     
     // Check for alerts
     const alerts = [];
-    if (budgetStatus.percentage > 75) {
+    if (todayDataQuality === 'REAL' && budgetStatus.percentage > 75) {
       alerts.push({
         type: 'warning',
         message: `Budget at ${budgetStatus.percentage.toFixed(0)}%`,
@@ -2217,6 +2245,595 @@ app.get('/api/budget/status', (req, res) => {
   }
 });
 
+// ===== MOONSHOT ACTUAL COST API =====
+const moonshotTracker = require('./moonshot-cost-tracker');
+const openaiTracker = require('./openai-cost-tracker');
+
+// Initialize tracking
+moonshotTracker.initTable();
+openaiTracker.initTable();
+
+// Sync costs every 30 minutes
+setInterval(() => {
+  moonshotTracker.syncMoonshotCosts().catch(err => {
+    console.error('[Moonshot Sync] Failed:', err.message);
+  });
+  openaiTracker.syncOpenAICosts().catch(err => {
+    console.error('[OpenAI Sync] Failed:', err.message);
+  });
+}, 30 * 60 * 1000);
+
+// API endpoint for actual costs (v4 - uses cost_tracking with historical data)
+app.get('/api/costs/actual', async (req, res) => {
+  try {
+    const db2 = new Database(path.join(DATA_DIR, 'dashboard.db'));
+    
+    // Get today's cost from cost_tracking (has historical data inserted)
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayCost = db2.prepare(`SELECT cost FROM cost_tracking WHERE id = 'moonshot-${todayStr}'`).get();
+    
+    // Get ground truth
+    const groundTruth = db2.prepare("SELECT * FROM cost_ground_truth WHERE id = 'moonshot'").get();
+    const groundTruthTotal = groundTruth?.total_ever || 0;
+    
+    // Get raw API data for reference
+    const rawToday = costAggregator.getTodayCost();
+    const dailyTrend = costAggregator.getDailyTrend();
+    const byAgent = costAggregator.getCostsByAgent();
+    
+    // Check if we have real data for today
+    const hasTodayData = todayCost && todayCost.cost > 0 && todayCost.cost < 50; // Sanity check
+    const todayCostValue = hasTodayData ? todayCost.cost : 0;
+    
+    db2.close();
+    
+    res.json({
+      today: {
+        usd: hasTodayData ? todayCostValue : 0,
+        tokens: rawToday.tokens,
+        quality: hasTodayData ? 'REAL' : 'FAKE',
+        note: hasTodayData ? 'Today\'s actual spend' : 'No cost data for today',
+        display: hasTodayData ? `$${todayCostValue.toFixed(2)}` : 'Fake Data'
+      },
+      sinceTrackingStarted: {
+        usd: groundTruthTotal,
+        since: '2026-02-08',
+        days: 10,
+        quality: 'REAL',
+        note: 'Total spend since we started tracking'
+      },
+      thisMonth: {
+        usd: groundTruthTotal,
+        quality: 'REAL',
+        note: 'Feb 1-17 actual spend'
+      },
+      totalEver: {
+        usd: groundTruthTotal,
+        quality: 'REAL',
+        source: 'user-provided ground truth'
+      },
+      dailyBudget: {
+        limit: 10.00,
+        spent: hasTodayData ? todayCostValue : null,
+        remaining: hasTodayData ? 10.00 - todayCostValue : null,
+        quality: hasTodayData ? 'REAL' : 'FAKE',
+        percentUsed: hasTodayData ? ((todayCostValue / 10.00) * 100).toFixed(1) : null
+      },
+      dataQuality: {
+        hasTodayData: hasTodayData,
+        groundTruthAge: groundTruth ? 
+          Math.floor((new Date() - new Date(groundTruth.updated_at)) / (1000 * 60 * 60)) : null
+      },
+      dailyTrend: dailyTrend,
+      byAgent: byAgent.byAgent,
+      rawApi: {
+        currentTokens: rawToday.tokens,
+        lastSync: rawToday.lastSync
+      }
+    });
+  } catch (err) {
+    console.error('[Cost API] Error:', err.message);
+    res.status(500).json({ error: 'Failed to get actual costs', message: err.message });
+  }
+});
+
+// Import cost aggregator and auto-approval
+const costAggregator = require('./cost-aggregator');
+const autoApproval = require('./auto-approval');
+
+// Initialize auto-approval
+autoApproval.initTable();
+autoApproval.initRules();
+
+// New endpoint: Daily trend
+app.get('/api/costs/trend', (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 7;
+    const trend = costAggregator.getDailyTrend();
+    res.json({
+      days: days,
+      data: trend.slice(0, days),
+      source: 'moonshot-api'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// New endpoint: Cost by agent
+app.get('/api/costs/by-agent', (req, res) => {
+  try {
+    const data = costAggregator.getCostsByAgent();
+    res.json({
+      byAgent: data.byAgent,
+      decisionsByAgent: data.decisionsByAgent,
+      lastUpdated: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===== AUTO-APPROVAL API =====
+
+// Evaluate a decision
+app.post('/api/auto-approval/evaluate', (req, res) => {
+  try {
+    const decision = req.body;
+    const result = autoApproval.evaluateDecision(decision);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get auto-approval rules
+app.get('/api/auto-approval/rules', (req, res) => {
+  try {
+    const rules = autoApproval.loadRules();
+    res.json(rules);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update rules
+app.put('/api/auto-approval/rules', (req, res) => {
+  try {
+    autoApproval.saveRules(req.body);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get stats
+app.get('/api/auto-approval/stats', (req, res) => {
+  try {
+    const stats = autoApproval.getStats();
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update agent score (call when decision is approved/rejected)
+app.post('/api/auto-approval/agent-score', (req, res) => {
+  try {
+    const { agent, outcome } = req.body;
+    autoApproval.updateAgentScore(agent, outcome);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===== ACTIVE WORK API =====
+app.get('/api/progress/active', (req, res) => {
+  try {
+    // Get from progress tracker or return mock data
+    const activeWork = [
+      {
+        id: 'work-1',
+        agent: 'Megatron',
+        title: 'Cost Tracking Fix',
+        status: 'running',
+        progress: 85,
+        startedAt: new Date().toISOString(),
+        estimatedCost: 0.80,
+        actualCost: 0.65,
+        phase: 'Implementation'
+      }
+    ];
+    res.json(activeWork);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// MiniMax Cost Tracking API
+app.get('/api/costs/by-provider', (req, res) => {
+  try {
+    const db2 = new Database(path.join(DATA_DIR, 'dashboard.db'));
+    
+    // Get costs by provider
+    const byProvider = db2.prepare(`
+      SELECT 
+        COALESCE(provider, 'moonshot') as provider,
+        SUM(cost) as total,
+        COUNT(*) as calls,
+        date
+      FROM cost_tracking
+      GROUP BY provider, date
+      ORDER BY date DESC, provider
+    `).all();
+    
+    // Get today's split
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todaySplit = db2.prepare(`
+      SELECT 
+        COALESCE(provider, 'moonshot') as provider,
+        SUM(cost) as total
+      FROM cost_tracking
+      WHERE date = ?
+      GROUP BY provider
+    `).all(todayStr);
+    
+    // Calculate totals
+    const totalApi = db2.prepare(`
+      SELECT SUM(cost) as total FROM cost_tracking 
+      WHERE provider IN ('moonshot', 'minimax', 'openai') OR provider IS NULL
+    `).get();
+    
+    const totalLocal = db2.prepare(`
+      SELECT SUM(cost) as total FROM cost_tracking WHERE provider = 'local'
+    `).get();
+    
+    db2.close();
+    
+    res.json({
+      byProvider: byProvider.slice(0, 30),
+      todaySplit,
+      summary: {
+        apiTotal: totalApi?.total || 0,
+        localTotal: totalLocal?.total || 0,
+        apiPercentage: totalApi?.total > 0 ? 
+          ((totalApi.total / (totalApi.total + (totalLocal?.total || 0))) * 100).toFixed(1) : 0
+      }
+    });
+  } catch (err) {
+    console.error('[Cost By Provider] Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Log cost with provider
+app.post('/api/costs/log', (req, res) => {
+  const { sessionName, cost, tokens, model, provider = 'moonshot' } = req.body;
+  
+  const db2 = new Database(path.join(DATA_DIR, 'dashboard.db'));
+  const id = uuidv4();
+  const today = new Date().toISOString().split('T')[0];
+  
+  try {
+    db2.prepare(`
+      INSERT INTO cost_tracking (id, date, sessionName, cost, tokens, model, provider, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, today, sessionName, cost || 0, tokens, model, provider, new Date().toISOString());
+    
+    db2.close();
+    res.json({ id, provider, success: true });
+  } catch (err) {
+    db2.close();
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Model Router API
+const { routeTask, classifyTask, getRoutingStats } = require('./model-router');
+const { getMiniMaxUsage } = require('./minimax-client');
+
+app.get('/api/router/status', (req, res) => {
+  try {
+    res.json({
+      status: 'active',
+      routes: getRoutingStats(),
+      coding: 'minimax',
+      heartbeat: 'local',
+      fallback: 'moonshot'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/router/classify', (req, res) => {
+  try {
+    const { description } = req.body;
+    const taskType = classifyTask(description);
+    res.json({ description, taskType });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// MiniMax Status API
+app.get('/api/minimax/status', async (req, res) => {
+  try {
+    const usage = await getMiniMaxUsage();
+    res.json({
+      status: 'connected',
+      plan: 'Coding Plan',
+      quota: 1000,
+      used: usage.model_remains?.[0]?.current_interval_usage_count || 0,
+      remaining: 1000 - (usage.model_remains?.[0]?.current_interval_usage_count || 0),
+      resetInterval: '5 hours'
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+// AUTONOMOUS MODE API
+const { manager, APPROVED_TASKS } = require('./autonomous-manager');
+
+app.get('/api/autonomous/status', (req, res) => {
+  res.json({
+    ...manager.getStatus(),
+    tasks: APPROVED_TASKS.map(t => ({
+      id: t.id,
+      title: t.title,
+      type: t.type,
+      estimatedPrompts: t.estimatedPrompts,
+      status: manager.completedTasks.find(ct => ct.id === t.id) ? 'completed' :
+              Array.from(manager.activeTasks.values()).find(at => at.id === t.id) ? 'active' : 'pending'
+    }))
+  });
+});
+
+app.post('/api/autonomous/start', (req, res) => {
+  const { taskId } = req.body;
+  const executionId = manager.startTask(taskId);
+  if (executionId) {
+    res.json({ success: true, executionId, taskId });
+  } else {
+    res.status(400).json({ error: 'Cannot start task (max concurrent or not found)' });
+  }
+});
+
+app.post('/api/autonomous/start-batch', (req, res) => {
+  const started = [];
+  for (const task of APPROVED_TASKS) {
+    if (manager.canStartTask() && 
+        !manager.completedTasks.find(ct => ct.id === task.id) &&
+        !Array.from(manager.activeTasks.values()).find(at => at.id === task.id)) {
+      const executionId = manager.startTask(task.id);
+      if (executionId) started.push({ taskId: task.id, executionId });
+    }
+  }
+  res.json({ success: true, started, count: started.length });
+});
+
+// Initialize Socket.io WebSocket server
+const wsServer = new DashboardWebSocket(server, {
+  origin: ["http://localhost:3000", "http://localhost:3002", "http://localhost:3003"]
+});
+
+// Integrate with progress tracker events
+progressTracker.on('workStarted', (work) => {
+  wsServer.startTask({
+    id: work.id,
+    title: work.title,
+    agent: work.agent,
+    phases: work.phases || [],
+    estimatedDuration: work.estimatedDuration,
+    estimatedCost: work.estimatedCost,
+    metadata: work.metadata
+  });
+});
+
+progressTracker.on('phaseUpdated', ({ workId, phaseIndex, status, details }) => {
+  wsServer.updateTaskPhase(workId, phaseIndex, status, details);
+});
+
+progressTracker.on('logAdded', ({ workId, log }) => {
+  wsServer.logTaskEvent(workId, log.message, log.level, log.metadata);
+  
+  // Calculate progress based on phases
+  const work = progressTracker.getWorkById(workId);
+  if (work && work.phases) {
+    const completedPhases = work.phases.filter(p => p.status === 'completed').length;
+    const progress = Math.round((completedPhases / work.phases.length) * 100);
+    wsServer.updateTaskProgress(workId, progress, {
+      message: log.message,
+      level: log.level
+    });
+  }
+});
+
+progressTracker.on('workCompleted', (work) => {
+  wsServer.completeTask(work.id, work.result);
+});
+
+// MiniMax quota streaming integration (getMiniMaxUsage already imported above)
+
+// Stream MiniMax quota every 30 seconds
+setInterval(async () => {
+  try {
+    const usage = await getMiniMaxUsage();
+    const quotaData = {
+      plan: 'Coding Plan',
+      quota: 1000,
+      used: usage.model_remains?.[0]?.current_interval_usage_count || 0,
+      remaining: 1000 - (usage.model_remains?.[0]?.current_interval_usage_count || 0),
+      resetInterval: '5 hours',
+      models: usage.model_remains || [],
+      isHealthy: (usage.model_remains?.[0]?.current_interval_usage_count || 0) < 800
+    };
+    
+    wsServer.updateMiniMaxQuota(quotaData);
+    
+    // Send alert if quota is running low
+    if (quotaData.remaining < 100) {
+      wsServer.broadcastMiniMaxAlert('warning', 'MiniMax quota running low', {
+        remaining: quotaData.remaining,
+        threshold: 100
+      });
+    }
+    if (quotaData.remaining < 20) {
+      wsServer.broadcastMiniMaxAlert('critical', 'MiniMax quota nearly exhausted', {
+        remaining: quotaData.remaining,
+        action: 'Consider switching to fallback provider'
+      });
+    }
+  } catch (err) {
+    wsServer.broadcastMiniMaxAlert('error', 'Failed to fetch MiniMax quota', {
+      error: err.message
+    });
+  }
+}, 30000);
+
+// Autonomous mode status broadcasting (manager already imported above)
+
+// Track autonomous mode changes
+const originalStartTask = manager.startTask.bind(manager);
+const originalCompleteTask = manager.completeTask.bind(manager);
+
+manager.startTask = function(taskId) {
+  const executionId = originalStartTask(taskId);
+  if (executionId) {
+    const task = manager.availableTasks.find(t => t.id === taskId);
+    wsServer.broadcastAutonomousTaskStarted({
+      executionId,
+      taskId,
+      title: task?.title || 'Unknown Task',
+      type: task?.type || 'task',
+      estimatedPrompts: task?.estimatedPrompts || 0
+    });
+    
+    // Update overall status
+    wsServer.setAutonomousStatus({
+      enabled: manager.isRunning,
+      activeTasks: Array.from(manager.activeTasks.values()).map(t => ({
+        id: t.id,
+        executionId: t.executionId,
+        progress: t.progress,
+        promptsUsed: t.promptsUsed,
+        startedAt: t.startedAt
+      })),
+      completedTasks: manager.completedTasks,
+      stats: manager.stats
+    });
+  }
+  return executionId;
+};
+
+manager.completeTask = function(executionId, result) {
+  originalCompleteTask(executionId, result);
+  wsServer.broadcastAutonomousTaskCompleted(executionId, result);
+  
+  // Update status
+  wsServer.setAutonomousStatus({
+    enabled: manager.isRunning,
+    activeTasks: Array.from(manager.activeTasks.values()).map(t => ({
+      id: t.id,
+      executionId: t.executionId,
+      progress: t.progress,
+      promptsUsed: t.promptsUsed
+    })),
+    completedTasks: manager.completedTasks,
+    stats: manager.stats
+  });
+};
+
+// Stream autonomous progress every 5 seconds
+setInterval(() => {
+  if (manager.isRunning && manager.activeTasks.size > 0) {
+    manager.activeTasks.forEach((task, executionId) => {
+      wsServer.broadcastAutonomousTaskProgress(executionId, task.progress);
+    });
+    
+    wsServer.setAutonomousStatus({
+      enabled: manager.isRunning,
+      activeTasks: Array.from(manager.activeTasks.values()).map(t => ({
+        id: t.id,
+        executionId: t.executionId,
+        progress: t.progress,
+        promptsUsed: t.promptsUsed,
+        estimatedPrompts: t.estimatedPrompts
+      })),
+      completedTasks: manager.completedTasks,
+      stats: manager.stats
+    });
+  }
+}, 5000);
+
+// WebSocket API endpoints
+app.post('/api/ws/broadcast', (req, res) => {
+  const { channel, message, level = 'info' } = req.body;
+  
+  if (channel === 'system') {
+    wsServer.broadcastSystemMessage(message, level);
+  } else if (channel === 'costs') {
+    wsServer.broadcastCostUpdate(message);
+  } else {
+    wsServer.io.emit(channel, message);
+  }
+  
+  res.json({ success: true, broadcast: true });
+});
+
+app.get('/api/ws/stats', (req, res) => {
+  res.json(wsServer.getStats());
+});
+
+// WebSocket test endpoint
+app.get('/api/ws/test-task', (req, res) => {
+  const taskId = `test-task-${Date.now()}`;
+  const task = wsServer.startTask({
+    id: taskId,
+    title: 'Test WebSocket Task',
+    agent: 'test-agent',
+    phases: [
+      { name: 'Initialization', status: 'pending' },
+      { name: 'Processing', status: 'pending' },
+      { name: 'Finalization', status: 'pending' }
+    ],
+    estimatedDuration: 30000,
+    estimatedCost: 0.05
+  });
+  
+  // Simulate progress
+  setTimeout(() => {
+    wsServer.updateTaskPhase(taskId, 0, 'completed');
+    wsServer.updateTaskProgress(taskId, 33, { message: 'Initialization complete' });
+  }, 2000);
+  
+  setTimeout(() => {
+    wsServer.updateTaskPhase(taskId, 1, 'in-progress');
+    wsServer.updateTaskProgress(taskId, 50, { message: 'Processing...' });
+  }, 4000);
+  
+  setTimeout(() => {
+    wsServer.updateTaskProgress(taskId, 75, { message: 'Almost done' });
+  }, 6000);
+  
+  setTimeout(() => {
+    wsServer.updateTaskPhase(taskId, 1, 'completed');
+    wsServer.updateTaskPhase(taskId, 2, 'completed');
+    wsServer.completeTask(taskId, { test: true, duration: 8000 });
+  }, 8000);
+  
+  res.json({ success: true, taskId, message: 'Test task started. Connect to WebSocket to see progress.' });
+});
+
+// Kanban Archive API
+const archiveRoutes = require('./archive-routes');
+app.use('/api/archive', archiveRoutes);
+
+// Store wsServer reference for archive routes
+app.locals.wss = wsServer;
+
 // Start server
 server.listen(PORT, () => {
   console.log(`🚀 Dashboard API running on http://localhost:${PORT}`);
@@ -2226,4 +2843,10 @@ server.listen(PORT, () => {
   console.log(`🧠 Shared Context API: /api/shared-context/*`);
   console.log(`📈 Progress Tracker API: /api/progress/*`);
   console.log(`🔌 WebSocket: ws://localhost:${PORT}/ws/progress`);
+  console.log(`⚡ Socket.io: http://localhost:${PORT}/socket.io`);
+  console.log(`💰 Cost Tracking: /api/costs/by-provider`);
+  console.log(`🧠 Model Router: /api/router/status`);
+  console.log(`⚡ MiniMax: /api/minimax/status`);
+  console.log(`📦 Kanban Archive: /api/archive/*`);
+  console.log(`🎮 WebSocket Test: http://localhost:${PORT}/websocket-demo.html`);
 });

@@ -1,0 +1,25 @@
+{
+  "name": "model-router-v2",
+  "version": "2.0.0",
+  "description": "Task-Based Model Routing with Enhanced NLP Classification",
+  "main": "src/router.py",
+  "scripts": {
+    "test": "python3 tests/test_router.py",
+    "cli": "python3 router_cli.py",
+    "route": "python3 router_cli.py route",
+    "stats": "python3 router_cli.py stats"
+  },
+  "keywords": [
+    "llm",
+    "routing",
+    "model-selection",
+    "cost-optimization",
+    "nlp",
+    "classification"
+  ],
+  "author": "Megatron",
+  "license": "MIT",
+  "dependencies": {
+    "pyyaml": ">=6.0"
+  }
+}

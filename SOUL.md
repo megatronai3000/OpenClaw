@@ -102,7 +102,8 @@
 2. **Project work** (code, docs, deliverables) → ~/openclaw_workspace/[project-name]/
 3. **Operational logs** (daily logs, cost tracking) → ~/.openclaw/workspace/daily_logs/
 4. **Research/experiments** (not tied to client projects) → ~/.openclaw/workspace/research/
-5. If uncertain → ask once, remember the pattern
+5. **DASHBOARD:** Only edit files in `~/.openclaw/workspace/megatron-dashboard/` — Never touch any other dashboard directory
+6. If uncertain → ask once, remember the pattern
 
 
 ## Proactive Work Boundaries

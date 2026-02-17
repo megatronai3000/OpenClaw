@@ -1,0 +1,103 @@
+{
+  "projects": [
+    {
+      "id": "p1",
+      "name": "DDI - Daily Design Intelligence",
+      "description": "AI-powered design tool discovery and evaluation newsletter",
+      "status": "active",
+      "priority": "hot",
+      "progress": 35,
+      "health": "good",
+      "startDate": "2026-02-08",
+      "targetDate": "2026-03-15",
+      "tasks": [
+        { "id": "t1", "title": "Complete Stage 2 Architecture", "status": "completed", "priority": "high", "projectId": "p1", "createdAt": "2026-02-08" },
+        { "id": "t2", "title": "Setup Next.js project", "status": "todo", "priority": "high", "projectId": "p1", "createdAt": "2026-02-09" }
+      ]
+    },
+    {
+      "id": "p2",
+      "name": "DeFi Portfolio Management",
+      "description": "Yield optimization and arbitrage opportunity tracking",
+      "status": "active",
+      "priority": "hot",
+      "progress": 60,
+      "health": "good",
+      "startDate": "2025-12-01",
+      "tasks": []
+    },
+    {
+      "id": "p3",
+      "name": "OpenClaw Infrastructure",
+      "description": "Local AI employee framework optimization",
+      "status": "active",
+      "priority": "warm",
+      "progress": 45,
+      "health": "at-risk",
+      "startDate": "2026-01-15",
+      "tasks": []
+    },
+    {
+      "id": "p4",
+      "name": "HyperWarp Maintenance",
+      "description": "veNFT marketplace monitoring and updates",
+      "status": "active",
+      "priority": "cold",
+      "progress": 90,
+      "health": "good",
+      "startDate": "2025-10-01",
+      "tasks": []
+    },
+    {
+      "id": "p5",
+      "name": "Design Consulting",
+      "description": "UX, Webflow, Figma projects",
+      "status": "active",
+      "priority": "hot",
+      "progress": 75,
+      "health": "good",
+      "startDate": "2026-01-01",
+      "tasks": []
+    }
+  ],
+  "reports": [
+    {
+      "id": "r1",
+      "date": "2026-02-10",
+      "summary": "Dashboard backend build complete. Research Strategist agent configured. Infrastructure setup complete.",
+      "cost": 0.55,
+      "tasksCompleted": 3,
+      "sessions": [
+        {
+          "startTime": "07:00",
+          "endTime": "07:45",
+          "trigger": "Dashboard fixes",
+          "tasks": [{ "description": "Fixed TypeScript, migrated to shadcn", "cost": "$0.15" }]
+        },
+        {
+          "startTime": "09:00",
+          "endTime": "10:30",
+          "trigger": "Research Strategist setup",
+          "tasks": [{ "description": "Created agent workspace, delivered research", "cost": "$0.35" }]
+        }
+      ],
+      "productivity": 85
+    },
+    {
+      "id": "r2",
+      "date": "2026-02-09",
+      "summary": "Built Command Center Dashboard v1. All 6 main components implemented.",
+      "cost": 0.51,
+      "tasksCompleted": 7,
+      "sessions": [
+        {
+          "startTime": "19:11",
+          "endTime": "23:29",
+          "trigger": "User request",
+          "tasks": [{ "description": "Built all React components, Tailwind styling", "cost": "$0.35" }]
+        }
+      ],
+      "productivity": 90
+    }
+  ]
+}

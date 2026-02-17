@@ -1,0 +1,87 @@
+{
+  "$schema": "./hardware-config.schema.json",
+  "description": "Hardware-Aware Router Configuration",
+  
+  "memoryRequirements": {
+    "3b": {
+      "minGB": 4,
+      "recommendedGB": 6,
+      "description": "Small models for simple tasks"
+    },
+    "7b": {
+      "minGB": 8,
+      "recommendedGB": 10,
+      "description": "Standard models for general use"
+    },
+    "8b": {
+      "minGB": 8,
+      "recommendedGB": 12,
+      "description": "Medium models for analysis"
+    },
+    "14b": {
+      "minGB": 16,
+      "recommendedGB": 20,
+      "description": "Large models for complex reasoning"
+    },
+    "32b": {
+      "minGB": 32,
+      "recommendedGB": 40,
+      "description": "Very large models for intensive tasks"
+    },
+    "70b": {
+      "minGB": 64,
+      "recommendedGB": 80,
+      "description": "Enterprise models (likely need API)"
+    }
+  },
+
+  "cpuRequirements": {
+    "minCores": 4,
+    "recommendedCores": 6,
+    "description": "More cores = better concurrent performance"
+  },
+
+  "taskThresholds": {
+    "simple": {
+      "maxTokens": 500,
+      "allowsLocal": true,
+      "description": "Greetings, simple Q&A, acknowledgments"
+    },
+    "standard": {
+      "maxTokens": 2000,
+      "allowsLocal": true,
+      "description": "General chat, summaries, explanations"
+    },
+    "complex": {
+      "maxTokens": 4000,
+      "allowsLocal": true,
+      "description": "Analysis, coding, multi-step reasoning"
+    },
+    "intensive": {
+      "maxTokens": 8000,
+      "allowsLocal": false,
+      "description": "Long-form content, research, large code generation"
+    }
+  },
+
+  "fallback": {
+    "alwaysPreferLocal": false,
+    "localFirstThreshold": 70,
+    "apiFallbackOnError": true,
+    "maxLocalLatency": 30000,
+    "description": "When local fails or is too slow, use API"
+  },
+
+  "modelPreferences": {
+    "coding": ["qwen2.5-coder:7b", "llama3.2:8b"],
+    "analysis": ["qwen2.5:14b", "llama3.2:8b"],
+    "chat": ["llama3.2:8b", "llama3.1:8b"],
+    "fast": ["llama3.2:3b", "llama3.2:8b"]
+  },
+
+  "costOptimization": {
+    "localWhenPossible": true,
+    "apiForUrgent": false,
+    "trackSavings": true
+  }
+}

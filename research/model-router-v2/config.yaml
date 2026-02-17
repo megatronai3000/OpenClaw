@@ -1,0 +1,284 @@
+# Model Router V2 Configuration
+# Task-Based Routing with Enhanced Classification
+
+# Provider Definitions with Cost & Quality Metrics
+providers:
+  openrouter:
+    name: "OpenRouter"
+    base_url: "https://openrouter.ai/api/v1"
+    models:
+      gpt-4o:
+        name: "GPT-4o"
+        cost_per_1k_input: 0.0025
+        cost_per_1k_output: 0.010
+        quality_score: 0.95
+        speed_score: 0.90
+        context_window: 128000
+        strengths: [reasoning, coding, analysis, creative]
+        weaknesses: [cost_sensitive_bulk]
+      
+      gpt-4o-mini:
+        name: "GPT-4o Mini"
+        cost_per_1k_input: 0.00015
+        cost_per_1k_output: 0.0006
+        quality_score: 0.82
+        speed_score: 0.95
+        context_window: 128000
+        strengths: [summarization, classification, simple_qa]
+        weaknesses: [complex_reasoning, creative_writing]
+      
+      claude-3-5-sonnet:
+        name: "Claude 3.5 Sonnet"
+        cost_per_1k_input: 0.003
+        cost_per_1k_output: 0.015
+        quality_score: 0.96
+        speed_score: 0.85
+        context_window: 200000
+        strengths: [analysis, coding, long_context, instruction_following]
+        weaknesses: [speed, cost]
+      
+      kimi-k2-5:
+        name: "Kimi K2.5"
+        cost_per_1k_input: 0.002
+        cost_per_1k_output: 0.008
+        quality_score: 0.93
+        speed_score: 0.88
+        context_window: 256000
+        strengths: [analysis, coding, long_context, multilingual]
+        weaknesses: []
+  
+  moonshot:
+    name: "Moonshot AI"
+    base_url: "https://api.moonshot.cn/v1"
+    models:
+      kimi-k2-5:
+        name: "Kimi K2.5"
+        cost_per_1k_input: 0.002
+        cost_per_1k_output: 0.008
+        quality_score: 0.93
+        speed_score: 0.88
+        context_window: 256000
+        strengths: [analysis, coding, long_context]
+  
+  local:
+    name: "Local Ollama"
+    base_url: "http://localhost:11434"
+    models:
+      llama3.2:8b:
+        name: "Llama 3.2 8B"
+        cost_per_1k_input: 0.0
+        cost_per_1k_output: 0.0
+        quality_score: 0.78
+        speed_score: 0.95
+        context_window: 128000
+        strengths: [cost_free, privacy, speed]
+        weaknesses: [quality, reasoning]
+      
+      qwen2.5-coder:7b:
+        name: "Qwen 2.5 Coder"
+        cost_per_1k_input: 0.0
+        cost_per_1k_output: 0.0
+        quality_score: 0.80
+        speed_score: 0.95
+        context_window: 128000
+        strengths: [coding, cost_free, speed]
+        weaknesses: [general_knowledge]
+      
+      qwen2.5:14b:
+        name: "Qwen 2.5 14B"
+        cost_per_1k_input: 0.0
+        cost_per_1k_output: 0.0
+        quality_score: 0.85
+        speed_score: 0.85
+        context_window: 128000
+        strengths: [reasoning, analysis, cost_free]
+        weaknesses: []
+
+# Task Classification Categories
+task_types:
+  coding:
+    description: "Software development, debugging, code review"
+    complexity_indicators:
+      - "function"
+      - "class"
+      - "bug"
+      - "error"
+      - "implement"
+      - "refactor"
+      - "API"
+      - "database"
+      - "algorithm"
+    preferred_models: [qwen2.5-coder:7b, claude-3-5-sonnet, gpt-4o]
+    min_quality_threshold: 0.80
+  
+  analysis:
+    description: "Data analysis, research synthesis, technical evaluation"
+    complexity_indicators:
+      - "analyze"
+      - "compare"
+      - "evaluate"
+      - "research"
+      - "synthesize"
+      - "performance"
+      - "metrics"
+      - "benchmark"
+    preferred_models: [claude-3-5-sonnet, kimi-k2-5, gpt-4o]
+    min_quality_threshold: 0.90
+  
+  creative:
+    description: "Writing, storytelling, content creation"
+    complexity_indicators:
+      - "write"
+      - "story"
+      - "creative"
+      - "draft"
+      - "blog"
+      - "essay"
+      - "poem"
+    preferred_models: [gpt-4o, claude-3-5-sonnet]
+    min_quality_threshold: 0.85
+  
+  summarization:
+    description: "Condensing content, extracting key points"
+    complexity_indicators:
+      - "summarize"
+      - "TL;DR"
+      - "key points"
+      - "brief"
+      - "overview"
+    preferred_models: [gpt-4o-mini, llama3.2:8b, gpt-4o]
+    min_quality_threshold: 0.70
+  
+  reasoning:
+    description: "Complex problem solving, logic, mathematics"
+    complexity_indicators:
+      - "solve"
+      - "calculate"
+      - "prove"
+      - "logic"
+      - "math"
+      - "equation"
+      - "optimize"
+    preferred_models: [claude-3-5-sonnet, gpt-4o, qwen2.5:14b]
+    min_quality_threshold: 0.90
+  
+  classification:
+    description: "Categorizing, tagging, sorting"
+    complexity_indicators:
+      - "classify"
+      - "categorize"
+      - "tag"
+      - "sort"
+      - "label"
+    preferred_models: [gpt-4o-mini, llama3.2:8b]
+    min_quality_threshold: 0.75
+  
+  chat:
+    description: "Conversational interaction, general Q&A"
+    complexity_indicators:
+      - "explain"
+      - "what is"
+      - "how to"
+      - "help"
+      - "question"
+    preferred_models: [llama3.2:8b, gpt-4o-mini, gpt-4o]
+    min_quality_threshold: 0.70
+
+# Routing Strategy Configuration
+routing:
+  # Default optimization target: balanced, quality, cost, speed
+  default_strategy: "balanced"
+  
+  strategies:
+    balanced:
+      quality_weight: 0.4
+      cost_weight: 0.3
+      speed_weight: 0.3
+    
+    quality:
+      quality_weight: 0.7
+      cost_weight: 0.1
+      speed_weight: 0.2
+    
+    cost:
+      quality_weight: 0.2
+      cost_weight: 0.6
+      speed_weight: 0.2
+    
+    speed:
+      quality_weight: 0.2
+      cost_weight: 0.2
+      speed_weight: 0.6
+  
+  # Budget thresholds for automatic strategy switching
+  budget_limits:
+    daily_max: 10.0
+    warning_threshold: 0.8
+    critical_threshold: 0.95
+  
+  # When budget is constrained, force cost strategy
+  auto_switch_on_budget_pressure: true
+
+# Learning Configuration
+learning:
+  # Track routing decisions and outcomes
+  enable_history: true
+  history_file: "data/history/routing_history.jsonl"
+  
+  # Feedback integration
+  feedback_window_hours: 24
+  
+  # Model performance decay (older feedback weighted less)
+  recency_weight: 0.95
+  
+  # Minimum samples before trusting learned preferences
+  min_samples_for_learning: 5
+  
+  # Confidence threshold for overriding default routing
+  confidence_threshold: 0.75
+
+# Override Rules
+overrides:
+  # Force specific models for matching patterns
+  force_rules:
+    - pattern: "(?i)security|password|secret|credential"
+      model: "local/llama3.2:8b"
+      reason: "Privacy-sensitive content stays local"
+    
+    - pattern: "(?i)quick|fast|immediate|now"
+      model: "local/llama3.2:8b"
+      reason: "Speed priority for time-sensitive requests"
+    
+    - pattern: "(?i)production|deploy|live|customer"
+      model: "openrouter/claude-3-5-sonnet"
+      reason: "High stakes requires highest quality"
+  
+  # Block certain patterns
+  block_patterns:
+    - pattern: "(?i)illegal|harmful|malicious"
+      reason: "Safety filter"
+  
+  # Context length overrides
+  context_rules:
+    - max_tokens: 100000
+      model: "openrouter/kimi-k2-5"
+      reason: "Long context requirement"
+    
+    - max_tokens: 150000
+      model: "openrouter/claude-3-5-sonnet"
+      reason: "Very long context requirement"
+
+# Quality Gates
+quality_gates:
+  # Minimum quality score by task complexity
+  complexity_thresholds:
+    simple: 0.70
+    medium: 0.80
+    complex: 0.90
+    critical: 0.95
+  
+  # Automatic retry on quality failure
+  auto_retry:
+    enabled: true
+    max_retries: 1
+    escalate_model: true

@@ -1,0 +1,3 @@
+# Daily API Cost Tracking
+
+This file will log daily API usage and costs breakdown by task type.
