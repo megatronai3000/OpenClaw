@@ -85,7 +85,7 @@ const MODEL_PRICING = {
   'moonshot/kimi-k2': { input: 0.30, output: 1.20, name: 'Kimi K2' },
   'openai/gpt-4o': { input: 2.50, output: 10.00, name: 'GPT-4o' },
   'openai/gpt-4o-mini': { input: 0.15, output: 0.60, name: 'GPT-4o Mini' },
-  'anthropic/claude-opus-4': { input: 15.00, output: 75.00, name: 'Claude Opus 4' },
+  
   'anthropic/claude-sonnet-4': { input: 3.00, output: 15.00, name: 'Claude Sonnet 4' },
   'google/gemini-2.5-flash': { input: 0.15, output: 0.60, name: 'Gemini 2.5 Flash' },
   'google/gemini-2.5-pro': { input: 1.25, output: 10.00, name: 'Gemini 2.5 Pro' },
